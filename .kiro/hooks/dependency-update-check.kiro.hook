@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Dependency Update Check",
+  "description": "Finds outdated packages, checks for vulnerabilities, and identifies major version updates requiring migration.",
+  "version": "1",
+  "when": {
+    "type": "manual",
+    "button_text": "Check Dependencies"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Check all project dependencies for updates and vulnerabilities:\n1. Run npm outdated to find outdated Node.js packages\n2. Run npm audit to check for known vulnerabilities\n3. Run pip list --outdated for Python packages if requirements.txt exists\n4. Flag any major version updates that may require migration effort\n5. Prioritize security-critical updates\nReport in order of priority: critical vulnerabilities first, then major updates, then minor/patch."
+  }
+}

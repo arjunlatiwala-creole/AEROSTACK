@@ -1,0 +1,20 @@
+{
+  "version": "0",
+  "id": "test-process-linear-projects",
+  "detail-type": "Ingestion Complete",
+  "source": "integration.ingest",
+  "account": "123456789012",
+  "time": "2026-02-19T10:00:00Z",
+  "region": "us-east-1",
+  "resources": [],
+  "detail": {
+    "integration_id": "test-linear",
+    "integration_type": "linear",
+    "entity": "projects",
+    "projectsProcessed": 1,
+    "issuesProcessed": 1,
+    "s3Key": "linear-projects/2026-02-27T06:56:23.595Z/projects.json",
+    "bucket": "aerostack-dev-linear-data",
+    "completed_at": "2026-02-24T10:49:02.795Z"
+  }
+}

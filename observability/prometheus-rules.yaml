@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aerostack-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+  - name: aerostack.api.errors
+    rules:
+    - alert: HighErrorRate
+      expr: |
+        (
+          sum(rate(http_requests_total{job="tools-api",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="tools-api"}[5m]))
+        ) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: "High HTTP error rate on tools-api"
+        description: "Error rate is {{ $value | humanizePercentage }} over last 5 minutes."

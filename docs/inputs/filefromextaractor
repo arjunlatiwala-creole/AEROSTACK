@@ -1,0 +1,258 @@
+# Create an Aerostack lens extractor script and a sample run on a tiny inline transcript.
+import re, json, csv, os, textwrap, datetime
+from typing import List, Dict, Tuple, Optional
+from dataclasses import dataclass, asdict
+import pandas as pd
+from caas_jupyter_tools import display_dataframe_to_user
+
+SCRIPT_PATH = "/mnt/data/aerostack_lens_extractor.py"
+
+script_code = r'''
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Aerostack Lens Extractor
+-------------------
+Quick, dependency-light extractor to classify transcript utterances into Aerostack lenses
+and map to Core Concepts. Works on .vtt, .srt, or plain .txt.
+
+Usage:
+  python aerostack_lens_extractor.py input.vtt --out events.jsonl
+  python aerostack_lens_extractor.py input.txt --out events.csv
+  python aerostack_lens_extractor.py input.srt --out events.jsonl --min_chars 20
+
+Outputs JSONL by default; use .csv extension to write CSV.
+
+Notes:
+- This is a rules-based baseline; plug your LLM in classify_lens_llm() if desired.
+- Timestamps and speakers are best-effort from the source format.
+"""
+import re, os, sys, json, csv, argparse, datetime
+from typing import List, Dict, Tuple, Optional
+
+LENS_SET = ["Opportunity","Dissonance","Emergence","Convergence","Inertia","Compression","Re-grounding"]
+
+ACTION_POLICY = {
+  "Opportunity": {"loop_action": "start", "tag": "#loop-opportunity", "aerostack_term": "Projection"},
+  "Dissonance":  {"loop_action": "recommit_or_adapt", "tag": "#loop-dissonance", "aerostack_term": "Adaptation"},
+  "Emergence":   {"loop_action": "initiate_or_fork", "tag": "#loop-emergence", "aerostack_term": "Emergence"},
+  "Convergence": {"loop_action": "codify", "tag": "#loop-convergence", "aerostack_term": "Feedback"},
+  "Inertia":     {"loop_action": "close", "tag": "#loop-inertia", "aerostack_term": "Friction"},
+  "Compression": {"loop_action": "store", "tag": "#loop-compression", "aerostack_term": "Feedback"},
+  "Re-grounding":{"loop_action": "anchor", "tag": "#loop-reground", "aerostack_term": "Assertion"}
+}
+
+DATE_PAT = re.compile(r'(?:\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}\b|\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b)', re.I)
+OWNER_PAT = re.compile(r'@[\w\.-]+')
+BLOCKER_TERMS = ["blocked", "blocking", "no reviewer", "waiting on", "stuck", "cannot", "can’t", "can't", "dependency", "permission", "access denied"]
+TASK_TERMS = ["build","ship","test","deploy","write","migrate","fix","draft","implement","configure","integrate","review","codify","document","measure","launch"]
+PROJECTION_TERMS = ["we could","let's","we should","what if we","proposal","propose","try","spin off","experiment"]
+DISSONANCE_TERMS = ["slip","slipping","off track","behind","not aligned","scope creep","missed","no owner","unassigned","overdue"]
+EMERGENCE_TERMS = ["unexpected","surprised","new idea","someone suggested","partner suggested","users are doing","we noticed a new","didn't plan","not on roadmap"]
+CONVERGENCE_TERMS = ["we keep seeing","every time","pattern","repeatedly","again and again","common theme","across customers","trend"]
+INERTIA_TERMS = ["talked about this again","revisited","no progress","still discussing","round in circles","looping","parked","stale"]
+COMPRESSION_TERMS = ["takeaway","principle","synthesis","tl;dr","playbook","in summary","lesson learned","key learning"]
+REGROUND_TERMS = ["values","tecspec","mission","anchor","north star","goal is","we exist to"]
+
+def guess_speaker(line: str) -> Optional[str]:
+    # naive: lines like "Alice:" or "[Alice]" or "ALICE:"
+    m = re.match(r'^\s*(?:\[)?([A-Za-z0-9_.@ -]{2,24})(?:\])?\s*:\s+', line)
+    if m:
+        sp = m.group(1).strip()
+        if len(sp) <= 24:
+            return sp
+    return None
+
+def parse_vtt(lines: List[str]) -> List[dict]:
+    events = []
+    ts_pat = re.compile(r'(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})')
+    i=0
+    curr_ts = None
+    while i < len(lines):
+        line = lines[i].rstrip("\n")
+        ts = ts_pat.search(line)
+        if ts:
+            curr_ts = ts.group(1)
+            i += 1
+            # collect text until blank
+            chunk=[]
+            while i < len(lines) and lines[i].strip():
+                chunk.append(lines[i].strip())
+                i += 1
+            text = " ".join(chunk)
+            sp = guess_speaker(text) or ""
+            events.append({"timestamp": curr_ts, "speaker": sp, "text": re.sub(r'^\s*[^:]{1,24}\s*:\s*','',text)})
+        i += 1
+    return events
+
+def parse_srt(lines: List[str]) -> List[dict]:
+    events=[]
+    ts_pat = re.compile(r'(\d{2}:\d{2}:\d{2}),\d{3}\s*-->\s*(\d{2}:\d{2}:\d{2}),\d{3}')
+    i=0
+    while i < len(lines):
+        # skip index line
+        if lines[i].strip().isdigit():
+            i += 1
+        if i>=len(lines): break
+        m = ts_pat.search(lines[i])
+        if m:
+            ts = m.group(1)
+            i += 1
+            chunk=[]
+            while i < len(lines) and lines[i].strip():
+                chunk.append(lines[i].strip())
+                i += 1
+            text = " ".join(chunk)
+            sp = guess_speaker(text) or ""
+            events.append({"timestamp": ts, "speaker": sp, "text": re.sub(r'^\s*[^:]{1,24}\s*:\s*','',text)})
+        i += 1
+    return events
+
+def parse_txt(lines: List[str]) -> List[dict]:
+    # Expect optional "HH:MM " prefix and/or "Speaker: text"
+    events=[]
+    for ln in lines:
+        s = ln.strip()
+        if not s: continue
+        ts = None
+        m = re.match(r'^\s*(\d{1,2}:\d{2})\s+(.*)$', s)
+        if m:
+            ts = m.group(1)+":00"
+            s = m.group(2)
+        sp = guess_speaker(s) or ""
+        text = re.sub(r'^\s*[^:]{1,24}\s*:\s*','',s)
+        events.append({"timestamp": ts or "", "speaker": sp, "text": text})
+    return events
+
+def score_assertion_strength(text: str) -> float:
+    score = 0.0
+    if re.search(DATE_PAT, text): score += 0.4
+    if re.search(r'\b(will|shall|by)\b', text, re.I): score += 0.4
+    if re.search(OWNER_PAT, text): score += 0.2
+    return min(score, 1.0)
+
+def score_focus_density(text: str) -> float:
+    hits = sum(1 for t in TASK_TERMS if re.search(r'\b'+re.escape(t)+r'\b', text, re.I))
+    return min(3.0, 0.5 * hits)
+
+def score_friction(text: str) -> float:
+    return 1.0 if any(k in text.lower() for k in BLOCKER_TERMS) else 0.0
+
+def extract_signals(text: str) -> dict:
+    dates = re.findall(DATE_PAT, text)
+    owners = re.findall(OWNER_PAT, text)
+    scope_change = bool(re.search(r'\b(scope|scope creep|cut scope|expand scope|de-scope)\b', text, re.I))
+    return {
+        "dates": dates,
+        "ownership": owners,
+        "scope_change": scope_change,
+        "has_blocker": any(k in text.lower() for k in BLOCKER_TERMS)
+    }
+
+def classify_lens_rules(text: str) -> Tuple[str, str, str]:
+    t = text.lower()
+    # Rule priority order
+    if any(k in t for k in DISSONANCE_TERMS): return ("Dissonance", ACTION_POLICY["Dissonance"]["aerostack_term"], "Commitment misalignment / drift")
+    if any(k in t for k in EMERGENCE_TERMS): return ("Emergence", ACTION_POLICY["Emergence"]["aerostack_term"], "Novel or unplanned signal")
+    if any(k in t for k in COMPRESSION_TERMS): return ("Compression", ACTION_POLICY["Compression"]["aerostack_term"], "Synthesis / distilled learning")
+    if any(k in t for k in CONVERGENCE_TERMS): return ("Convergence", ACTION_POLICY["Convergence"]["aerostack_term"], "Pattern repetition")
+    if any(k in t for k in INERTIA_TERMS): return ("Inertia", ACTION_POLICY["Inertia"]["aerostack_term"], "No progress / circular motion")
+    if any(k in t for k in REGROUND_TERMS): return ("Re-grounding", ACTION_POLICY["Re-grounding"]["aerostack_term"], "Return to values/TECSPEC")
+    if any(k in t for k in PROJECTION_TERMS): return ("Opportunity", ACTION_POLICY["Opportunity"]["aerostack_term"], "Proposal to create value")
+    # Fallbacks using scores
+    if score_friction(text) >= 1.0:
+        return ("Dissonance","Adaptation","Explicit blocker present")
+    if score_assertion_strength(text) >= 0.8 and re.search(r'\bship|launch|deliver\b', text, re.I):
+        return ("Opportunity","Projection","Strong future commitment with deliverable")
+    # Default to Feedback-neutral → Compression-lite
+    return ("Compression","Feedback","Default: neutral info / soft synthesis")
+
+def detect_format(path: str) -> str:
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".vtt": return "vtt"
+    if ext == ".srt": return "srt"
+    return "txt"
+
+def read_lines(path: str) -> List[str]:
+    with open(path,'r',encoding='utf-8',errors='ignore') as f:
+        return f.readlines()
+
+def write_output(rows: List[dict], out_path: str):
+    ext = os.path.splitext(out_path)[1].lower()
+    if ext == ".csv":
+        fieldnames = list(rows[0].keys()) if rows else []
+        with open(out_path,'w',newline='',encoding='utf-8') as f:
+            w=csv.DictWriter(f, fieldnames=fieldnames)
+            w.writeheader()
+            for r in rows: w.writerow(r)
+    else:
+        with open(out_path,'w',encoding='utf-8') as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("input", help="Transcript file (.vtt, .srt, .txt)")
+    ap.add_argument("--out", default=None, help="Output path (.jsonl default or .csv)")
+    ap.add_argument("--min_chars", type=int, default=10, help="Skip utterances shorter than this many chars")
+    args = ap.parse_args()
+
+    fmt = detect_format(args.input)
+    lines = read_lines(args.input)
+    if fmt == "vtt": events = parse_vtt(lines)
+    elif fmt == "srt": events = parse_srt(lines)
+    else: events = parse_txt(lines)
+
+    rows=[]
+    for e in events:
+        txt = e["text"].strip()
+        if len(txt) < args.min_chars: continue
+        lens, aerostack_term, reason = classify_lens_rules(txt)
+        signals = extract_signals(txt)
+        row = {
+            "timestamp": e.get("timestamp") or "",
+            "speaker": e.get("speaker") or "",
+            "text": txt,
+            "lens": lens,
+            "aerostack_term": aerostack_term,
+            "reason": reason,
+            "loop_action": ACTION_POLICY[lens]["loop_action"],
+            "tag": ACTION_POLICY[lens]["tag"],
+            "assertion_strength": round(score_assertion_strength(txt),2),
+            "focus_density": round(score_focus_density(txt),2),
+            "friction": round(score_friction(txt),2),
+            "dates": ";".join(signals["dates"]),
+            "ownership": ";".join(signals["ownership"]),
+            "scope_change": signals["scope_change"]
+        }
+        rows.append(row)
+
+    out_path = args.out or (os.path.splitext(args.input)[0] + ".jsonl")
+    write_output(rows, out_path)
+    print(f"Wrote {len(rows)} rows → {out_path}")
+
+if __name__ == "__main__":
+    main()
+'''
+with open(SCRIPT_PATH, "w", encoding="utf-8") as f:
+    f.write(script_code)
+
+# Create a tiny sample transcript file
+sample_path = "/mnt/data/sample_transcript.txt"
+sample_text = """09:00 Alice: Let's build the async bot MVP and ship by Sept 1.
+09:02 Bob: We're blocked—no reviewer assigned for the Fargate task.
+09:05 Alice: We've seen this pattern in three customers; we should codify it.
+09:08 Carol: TL;DR the takeaway is that smaller scope gets us to launch.
+09:12 Dave: We're revisiting this again with no progress since last week.
+09:15 Erin: Anchor to TECSPEC: reduce toil, accelerate delivery.
+"""
+with open(sample_path, "w", encoding="utf-8") as f:
+    f.write(sample_text)
+
+# Run the extractor on the sample and show a preview
+!python /mnt/data/aerostack_lens_extractor.py /mnt/data/sample_transcript.txt --out /mnt/data/sample_events.csv --min_chars 5
+
+df = pd.read_csv("/mnt/data/sample_events.csv")
+display_dataframe_to_user("Aerostack Lens Extraction (sample)", df)
+
+SCRIPT_PATH, sample_path, "/mnt/data/sample_events.csv"

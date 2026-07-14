@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Security Scan on Dependencies",
+  "description": "Audits for vulnerabilities when package.json, requirements.txt, or other dependency files change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["package.json", "package-lock.json", "requirements.txt", "requirements-dev.txt", "pyproject.toml"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Dependency files have changed. Run security audit: npm audit --audit-level=high for Node.js dependencies, pip-audit for Python dependencies. Report any high or critical vulnerabilities found and suggest remediation."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "name": "Accessibility Audit (WCAG 2.1 AA)",
+  "description": "Checks React components for WCAG 2.1 AA compliance. Enable for client-facing projects and GRC engagements.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/components/**/*.tsx", "src/app/**/*.tsx"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A React component has been saved. Audit it for WCAG 2.1 AA compliance following enterprise component library standards: keyboard navigation, ARIA attributes, color contrast considerations, focus management, screen reader compatibility, touch target sizes (44x44px minimum). Run eslint-plugin-jsx-a11y rules if available. Report violations with specific remediation steps."
+  }
+}

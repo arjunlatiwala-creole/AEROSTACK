@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "GRC Compliance Audit",
+  "description": "Scans project for GRC compliance issues: PII exposure, missing audit logging, accessibility gaps, data classification violations.",
+  "version": "1",
+  "when": {
+    "type": "manual",
+    "button_text": "Run GRC Compliance Audit"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run a comprehensive GRC compliance audit against enterprise standards:\n1. Scan for PII in client-side code (Zustand stores, localStorage, sessionStorage usage) — check for email, SSN, phone, address, password, token patterns\n2. Verify Server Actions in src/lib/actions/ include audit event logging\n3. Run accessibility checks on components (jsx-a11y rules)\n4. Scan for hardcoded secrets in src/ and infra/ directories\n5. Check data classification compliance — CONFIDENTIAL+ data should not be serialized to client components\n6. Verify auth checks exist in middleware and Server Actions\nReport findings grouped by severity: CRITICAL, HIGH, MEDIUM, LOW."
+  }
+}

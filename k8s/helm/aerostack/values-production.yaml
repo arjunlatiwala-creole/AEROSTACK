@@ -1,0 +1,176 @@
+# Aerostack Production Environment Values
+# Production-ready configuration with high availability
+
+global:
+  environment: production
+  domain: aerostack.enterprise.io
+  storageClass: "gp3"
+  imagePullSecrets:
+    - name: regcred
+
+frontend:
+  replicaCount: 3
+  image:
+    repository: "your-registry.io/enterprise/aerostack-frontend"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+
+backend:
+  replicaCount: 5
+  debug: false
+  image:
+    repository: "your-registry.io/enterprise/aerostack-backend"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 5
+    maxReplicas: 30
+    targetCPUUtilizationPercentage: 70
+  env:
+    - name: NODE_ENV
+      value: "production"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: postgresql-credentials
+          key: url
+    - name: REDIS_URL
+      valueFrom:
+        secretKeyRef:
+          name: redis-credentials
+          key: url
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: aerostack.enterprise.io
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: api.aerostack.enterprise.io
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+  tls:
+    - secretName: aerostack-tls
+      hosts:
+        - aerostack.enterprise.io
+        - api.aerostack.enterprise.io
+
+postgresql:
+  enabled: true
+  auth:
+    existingSecret: "postgresql-credentials"
+  architecture: "replication"
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 100Gi
+    resources:
+      limits:
+        cpu: 4000m
+        memory: 8Gi
+      requests:
+        cpu: 2000m
+        memory: 4Gi
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 100Gi
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 1000m
+        memory: 2Gi
+
+redis:
+  enabled: true
+  auth:
+    existingSecret: "redis-credentials"
+  architecture: "replication"
+  master:
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 20Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  replica:
+    replicaCount: 3
+    persistence:
+      enabled: true
+      storageClass: "gp3"
+      size: 20Gi
+
+monitoring:
+  enabled: true
+  prometheus:
+    prometheusSpec:
+      retention: 90d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: gp3
+            resources:
+              requests:
+                storage: 100Gi
+  grafana:
+    adminPassword: ""  # Set via secret
+    persistence:
+      enabled: true
+      storageClassName: gp3
+      size: 20Gi
+
+cert-manager:
+  enabled: true
+
+networkPolicies:
+  enabled: true
+  defaultDeny: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+resourceQuotas:
+  enabled: true
+

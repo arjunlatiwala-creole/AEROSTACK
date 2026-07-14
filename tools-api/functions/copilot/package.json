@@ -1,0 +1,12 @@
+{
+  "name": "copilot-runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@copilotkit/runtime": "1.53.0",
+    "@langchain/aws": "0.1.9",
+    "@langchain/core": "0.3.66",
+    "serverless-http": "3.2.0"
+  }
+}

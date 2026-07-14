@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Stopping application stack..."
+pnpm stop:stack
+
+echo "Stopping infrastructure services..."
+docker-compose down
+
+echo "All services stopped!"

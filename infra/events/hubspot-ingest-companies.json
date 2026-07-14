@@ -1,0 +1,15 @@
+{
+    "version": "0",
+    "id": "test-event-companies",
+    "detail-type": "Ingest Requested",
+    "source": "manual.trigger",
+    "account": "123456789012",
+    "time": "2026-01-28T10:00:00Z",
+    "region": "us-east-1",
+    "resources": [],
+    "detail": {
+      "integration_id": "test-hubspot",
+      "integration_type": "hubspot",
+      "entityType": "companies"
+    }
+  }

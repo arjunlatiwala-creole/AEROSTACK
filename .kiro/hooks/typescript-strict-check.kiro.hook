@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "TypeScript Strict Mode Check",
+  "description": "Verifies TypeScript strict mode compliance. Checks for forbidden patterns: any types, ts-ignore, non-null assertions.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/**/*.ts", "src/**/*.tsx", "infra/**/*.ts"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A TypeScript file has been saved. Run npx tsc --noEmit to check for type errors. Also scan the file for forbidden enterprise patterns: 'any' type usage, @ts-ignore directives, non-null assertions (!.). Report violations against enterprise TypeScript standards."
+  }
+}

@@ -1,0 +1,1 @@
+{\n  "name": "stage-complete",\n  "version": "1.0.0",\n  "enabled": true,\n  "description": "After agent stops, write session state to git-readable file and commit - Cowork monitors this to advance the SDLC stage in Linear",\n  "when": {\n    "type": "agentStop"\n  },\n  "then": {\n    "type": "runCommand",\n    "command": "bash .kiro/scripts/report-state.sh"\n  }\n}\n

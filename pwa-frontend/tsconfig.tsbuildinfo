@@ -1,0 +1,8 @@
+{
+    "root": [
+        "./src/main.tsx",
+        "./src/app.tsx",
+        "./src/store/index.ts"
+    ],
+    "version": "5.9.2"
+}

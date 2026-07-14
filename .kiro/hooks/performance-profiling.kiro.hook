@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Performance Profiling",
+  "description": "Runs Lighthouse CI and bundle analysis against enterprise performance budgets.",
+  "version": "1",
+  "when": {
+    "type": "manual",
+    "button_text": "Profile Performance"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run performance profiling against enterprise budgets:\n1. Run npx next build and analyze bundle sizes per route\n2. Check against budgets: Initial JS < 200KB gzipped, per-route < 50KB, total page < 1MB\n3. Run npx lhci autorun if Lighthouse CI is configured\n4. Check Core Web Vitals targets: LCP < 2.5s, INP < 200ms, CLS < 0.1\n5. Identify largest bundle contributors and suggest code-splitting or lazy loading opportunities"
+  }
+}

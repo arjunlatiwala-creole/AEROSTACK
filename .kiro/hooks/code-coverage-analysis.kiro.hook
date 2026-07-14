@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Code Coverage Analysis",
+  "description": "Analyzes test coverage and identifies gaps against enterprise coverage thresholds.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "button_text": "Analyze Coverage"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run test coverage analysis and compare against enterprise thresholds:\n1. Run npx vitest run --coverage --silent for TypeScript/JavaScript\n2. Run pytest --cov=src --cov-report=term-missing -q for Python\n3. Compare against thresholds: business logic 80%+, Server Actions 80%+, React components 60%+, CDK constructs 90%+, Python handlers 70%+\n4. Identify the most critical uncovered areas\n5. Suggest which tests to write first based on risk and coverage gap"
+  }
+}

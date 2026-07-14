@@ -1,0 +1,56 @@
+name: Promote dev → main (prod release)
+
+# Clean promotion: dev is continuous (auto-deploys on every push via deploy.yml),
+# prod is a deliberate button. Running this fast-forwards main to dev and pushes,
+# which triggers deploy.yml's prod path (CDK prod stacks) + the enterprise-aerostack-main
+# Amplify build. Nothing deploys to prod without someone running this.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "promote" to confirm promoting dev → main (prod)'
+        required: true
+        default: ""
+
+permissions:
+  contents: write
+  actions: write   # to dispatch deploy.yml after pushing main (GITHUB_TOKEN pushes don't auto-trigger)
+
+jobs:
+  promote:
+    if: ${{ github.event.inputs.confirm == 'promote' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Merge dev into main and push (triggers prod deploy)
+        id: merge
+        run: |
+          git config user.name "enterprise-aerostack-bot"
+          git config user.email "aerostack-bot@enterprise.io"
+          git fetch origin dev
+          BEFORE=$(git rev-parse HEAD)
+          git merge --no-ff origin/dev -m "promote: dev → main (prod release)"
+          AFTER=$(git rev-parse HEAD)
+          if [ "$BEFORE" = "$AFTER" ]; then
+            echo "main already up to date with dev — nothing to promote."
+            echo "promoted=false" >> "$GITHUB_OUTPUT"
+          else
+            git push origin main
+            echo "Promoted dev → main."
+            echo "promoted=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger prod deploy
+        # A push made with GITHUB_TOKEN does not trigger deploy.yml's push event,
+        # so dispatch it explicitly against main (deploy.yml maps main → prod stage).
+        if: ${{ steps.merge.outputs.promoted == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref main
+
+      - name: Summary
+        run: echo "Promotion complete. Watch the 'Deploy Aerostack' run on main and the enterprise-aerostack-main Amplify build."

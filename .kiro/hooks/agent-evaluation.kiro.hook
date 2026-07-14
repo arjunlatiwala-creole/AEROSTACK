@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Agent Evaluation Run",
+  "description": "Runs evaluation suite against deployed Bedrock agents. Checks task completion, guardrail effectiveness, and response quality.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "button_text": "Evaluate Agents"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run agent evaluation suite:\n1. Execute agent tests in tests/agents/ directory (pytest -q --tb=short)\n2. Check guardrail trigger rates and patterns\n3. Verify agent stays within its defined scope\n4. Test edge cases: empty inputs, malformed data, out-of-scope requests\n5. Summarize: task completion rate, failing tests, guardrail patterns, recommendations\nReference enterprise agentic AI standards for compliance gaps."
+  }
+}

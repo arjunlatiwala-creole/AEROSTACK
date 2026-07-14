@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Zoom recording automation to store recordings in Google Drive and S3'
+Parameters:
+  S3BucketName:
+    Type: String
+    Default: enterprise-meeting-recordings
+    Description: Name of the existing S3 bucket to store recordings
+  ZoomClientId:
+    Type: String
+    Default: HLTYdo5QIS5MVSAG6ZG0w
+    Description: Zoom OAuth Client ID
+  ZoomClientSecret:
+    Type: String
+    Default: DDjsiEs05b2QsQ3M5kEFLjuDpPi40Dqt
+    Description: Zoom OAuth Client Secret
+    NoEcho: true
+  ZoomWebhookSecret:
+    Type: String
+    Description: Zoom Webhook Secret
+    NoEcho: true
+  ZoomAccountId:
+    Type: String
+    Default: PCvSzbXiQuShf8xv9ULdNA
+    Description: Zoom Account ID
+  GcpServiceAccountSecretName:
+    Type: String
+    Description: Name of the secret containing GCP service account credentials
+  GSuiteUserEmail:
+    Type: String
+    Description: G Suite user email for Google Drive access
+  GDriveFolderId:
+    Type: String
+    Description: Google Drive folder ID for storing recordings
+  SesFromEmail:
+    Type: String
+    Default: "no-reply@enterprise.io"
+    Description: Verified SES sender email for access-request notifications
+  AdminEmails:
+    Type: String
+    Default: "divyaraj@enterprise.io"
+    Description: Comma-separated list of admin/superadmin emails to notify on access requests
+Resources:
+  ZoomToGDriveFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: python3.12
+      RequirementsFile: requirements.txt
+    Properties:
+      CodeUri: function
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Timeout: 900
+      MemorySize: 1024
+      Environment:
+        Variables:
+          S3_BUCKET:
+            Ref: S3BucketName
+          ZOOM_CLIENT_ID:
+            Ref: ZoomClientId
+          ZOOM_CLIENT_SECRET:
+            Ref: ZoomClientSecret
+          ZOOM_WEBHOOK_SECRET:
+            Ref: ZoomWebhookSecret
+          ZOOM_ACCOUNT_ID:
+            Ref: ZoomAccountId
+          GCP_SERVICE_ACCOUNT_SECRET_NAME:
+            Ref: GcpServiceAccountSecretName
+          G_SUITE_USER_EMAIL:
+            Ref: GSuiteUserEmail
+          GDRIVE_FOLDER_ID:
+            Ref: GDriveFolderId
+          AWS_REGION:
+            Ref: AWS::Region
+          SES_FROM_EMAIL:
+            Ref: SesFromEmail
+          ADMIN_EMAILS:
+            Ref: AdminEmails
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !Sub arn:aws:s3:::${S3BucketName}
+                - !Sub arn:aws:s3:::${S3BucketName}/*
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"

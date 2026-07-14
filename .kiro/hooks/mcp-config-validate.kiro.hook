@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "MCP Config Validation",
+  "description": "Validates MCP server configurations when config files change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [".kiro/settings/mcp.json", "mcp.json"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "MCP configuration has changed. Validate the JSON structure is correct. Verify each MCP server has required fields (command, args). Check autoApprove lists follow enterprise MCP standards (no write operations auto-approved). Test connectivity if possible."
+  }
+}

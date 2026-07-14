@@ -1,0 +1,97 @@
+# Aerostack Development Environment Values
+# Override base values.yaml for local development
+
+global:
+  environment: development
+  domain: aerostack.local
+  storageClass: "standard"
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: "dev"
+    pullPolicy: "Always"
+  resources:
+    limits:
+      cpu: 250m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+
+backend:
+  replicaCount: 1
+  debug: true
+  image:
+    tag: "dev"
+    pullPolicy: "Always"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+  env:
+    - name: NODE_ENV
+      value: "development"
+    - name: LOG_LEVEL
+      value: "debug"
+    - name: DATABASE_URL
+      value: "postgresql://agent:agentpass@postgres:5432/agentdb"
+    - name: REDIS_URL
+      value: "redis://:redis-password@redis-master:6379"
+
+ingress:
+  enabled: false  # Use port-forward for local dev
+
+postgresql:
+  enabled: true
+  auth:
+    database: "agentdb"
+    username: "agent"
+    password: "agentpass"
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+redis:
+  enabled: true
+  auth:
+    password: "redis-password"
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+monitoring:
+  enabled: false
+
+cert-manager:
+  enabled: false
+
+networkPolicies:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+

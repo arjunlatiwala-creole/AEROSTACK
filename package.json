@@ -1,0 +1,47 @@
+{
+	"name": "agentic-devops-showcase",
+	"version": "1.0.0",
+	"description": "Agentic DevOps Showcase showcase Project",
+	"private": true,
+	"packageManager": "pnpm@9.10.0",
+	"scripts": {
+		"dev": "turbo run dev --parallel",
+		"build": "turbo run build",
+		"typecheck": "turbo run typecheck",
+		"lint": "turbo run lint",
+		"test": "turbo run test",
+		"start:stack": "node ./scripts/start-stack.mjs",
+		"stop:stack": "node ./scripts/stop-stack.mjs",
+		"dev:start": "./dev.sh",
+		"dev:frontend": "cd pwa-frontend && pnpm dev",
+		"infra:build": "turbo run build --filter=infra",
+		"infra:synth": "turbo run synth --filter=infra",
+		"infra:diff": "turbo run diff --filter=infra",
+		"infra:deploy": "turbo run deploy --filter=infra",
+		"infra:deploy:prod": "turbo run deploy:prod --filter=infra",
+		"infra:bootstrap": "turbo run bootstrap --filter=infra",
+		"infra:bootstrap:prod": "turbo run bootstrap:prod --filter=infra"
+	},
+	"workspaces": [
+		"pwa-frontend",
+		"common",
+		"infra"
+	],
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"aws-cdk": "^2.170.0",
+		"concurrently": "^8.2.2",
+		"turbo": "^2.5.5",
+		"typescript": "^5.7.2"
+	},
+	"pnpm": {
+		"overrides": {
+			"react-syntax-highlighter": "15.6.1",
+			"property-information": "5.6.0"
+		}
+	},
+	"dependencies": {},
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

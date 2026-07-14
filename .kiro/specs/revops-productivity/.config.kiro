@@ -1,0 +1,15 @@
+{
+  "workflow": "requirements-first",
+  "spec": "revops-productivity",
+  "source_prd": "docs/inputs/PRD-Aerostack-RevOps-Productivity-v0.1.md",
+  "tier": "Tier 3 — Aerostack-class business application",
+  "flow": "Revenue",
+  "build_posture": {
+    "backend": "extend-additive (reuse listDeals/getGlobalSummary, deal-phases, get-opportunity, velocity util, withPermissions; no logical-ID changes to existing constructs)",
+    "frontend": "net-new Cloudscape rebuild (intentional breaking; supersedes shadcn pwa-frontend RevOps screens)"
+  },
+  "branch": "dev",
+  "merge_strategy": "direct-to-dev (no PRs)",
+  "deploy_rhythm": "build slice -> deploy to dev -> review -> iterate; never promote to prod",
+  "tenant_discipline": "every new record carries tenant_id"
+}

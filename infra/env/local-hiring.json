@@ -1,0 +1,12 @@
+{
+  "Parameters": {
+    "DYNAMODB_LOCAL_ENDPOINT": "http://dynamodb-local:8000",
+    "AWS_SAM_LOCAL": "true",
+    "PERSON_TABLE_NAME": "local-person",
+    "HIRING_CANDIDATES_TABLE_NAME": "local-hiring-candidates",
+    "HIRING_NOTES_TABLE_NAME": "local-hiring-notes",
+    "HIRING_JOB_RECS_TABLE_NAME": "local-hiring-job-recs",
+    "HIRING_COMP_PLANS_TABLE_NAME": "local-hiring-comp-plans",
+    "HIRING_RESUME_BUCKET_NAME": "local-hiring-resumes"
+  }
+}

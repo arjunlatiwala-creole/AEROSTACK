@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "name": "Documentation Sync",
+  "description": "Checks if documentation needs updating when code changes. Enable for projects with documentation requirements.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/lib/actions/**/*.ts", "src/app/api/**/*.ts", "infra/lib/**/*.ts"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Code files that may affect documentation have changed. Check if any of the following need updates: README.md, API documentation, Architecture Decision Records (docs/adr/), infrastructure documentation. If Server Actions or API routes changed, flag that API docs may be stale. Suggest specific documentation updates needed."
+  }
+}

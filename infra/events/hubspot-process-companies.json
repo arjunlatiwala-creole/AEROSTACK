@@ -1,0 +1,16 @@
+{
+    "version": "0",
+    "id": "test-process-companies",
+    "detail-type": "Ingestion Complete",
+    "source": "integration.ingest",
+    "account": "123456789012",
+    "time": "2026-01-28T10:00:00Z",
+    "region": "us-east-1",
+    "resources": [],
+    "detail": {
+      "integration_id": "test-hubspot",
+      "integration_type": "hubspot",
+      "entity": "companies",
+      "completed_at": "2026-01-28T10:00:00Z"
+    }
+  }

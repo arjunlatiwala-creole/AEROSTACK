@@ -1,0 +1,38 @@
+enterprise brandkit
+
+
+Amazon Ember Light Font
+Colors:
+White: #FFFFFF
+Offwhite: #F9F9F9
+Gray: #ACB7C5
+Darker Gray: #6E7A84
+Orange: #FF9900
+Blue: #0096FF
+Green: #B6FFBB
+Squid Ink: #002D43
+Black: #000000
+Pink: #FF66B2
+
+Execution - Orange: #FF9900
+Innovation  - Blue: #0096FF
+Managed -  Green: #B6FFBB
+Optimization - Pink: #FF66B2
+
+
+enterprise.ai brandkit
+
+Colors:
+White: #FFFFFF
+Black: #000000
+Dayglo Green: #39FF14
+
+ 
+Fonts – in marketing and branding gdrive folder, uploaded to current WP site
+Ember_md –
+Ember_lt –
+Ember_con –
+Ember_c_bold –
+
+
+ 

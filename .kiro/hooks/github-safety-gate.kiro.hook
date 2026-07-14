@@ -1,0 +1,13 @@
+{
+  "name": "GitHub Safety Gate",
+  "version": "1.0.0",
+  "description": "Blocks destructive GitHub MCP operations (delete, fork) to protect enterpriseio org repos. Allowed: reads, writes, repo creation, PRs, issues.",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [".*github.*delete.*", ".*github.*fork.*"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "STOP. This tool call involves a destructive or high-risk GitHub operation (delete or fork). Do NOT proceed with this tool call. Inform the user that this operation is blocked by the GitHub Safety Gate hook and they must perform it manually on GitHub. This is a non-negotiable safety policy for the enterpriseio organization."
+  }
+}

@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Keep GitHub Action versions current automatically. This is the durable fix
+  # for "Node.js NN is deprecated" runner warnings — Dependabot opens a PR when
+  # an action publishes a new major/minor, and deploy.yml's build gate validates it.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    labels:
+      - "ci"
+      - "maintenance"

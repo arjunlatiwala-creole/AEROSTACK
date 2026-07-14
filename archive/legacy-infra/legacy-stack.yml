@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Legacy CloudFormation template for legacy stack testing'
+Resources:
+  LegacyS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: aerostack-legacy-data-1234
+      AccessControl: PublicRead
+  LegacyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      ImageId: ami-0c55b159cbfafe1f0
+      SecurityGroups:
+        - default

@@ -1,0 +1,29 @@
+{
+  "Parameters": {
+    "DYNAMODB_LOCAL_ENDPOINT": "http://dynamodb-local:8000",
+    "AWS_SAM_LOCAL": "true",
+    "PERSON_TABLE_NAME": "local-person",
+    "INTEGRATIONS_RAW_TABLE_NAME": "local-integrations-raw",
+    "BFPM_SESSIONS_TABLE_NAME": "local-bfpm-sessions",
+    "BFPM_DATA_TABLE_NAME": "local-bfpm-data",
+    "LOOPS_TABLE_NAME": "local-loops",
+    "LOOP_FINANCIALS_TABLE_NAME": "local-loop-financials",
+    "DEALS_TABLE_NAME": "local-deals",
+    "COMPANIES_TABLE_NAME": "local-companies",
+    "CONTACTS_TABLE_NAME": "local-contacts",
+    "INTEGRATIONS_TABLE_NAME": "local-integrations",
+    "INTEGRATION_SYNC_HISTORY_TABLE_NAME": "local-integration-sync-history",
+    "INTEGRATION_SYNC_DETAILS_TABLE_NAME": "local-integration-sync-details",
+    "UNIFIED_OPPORTUNITIES_TABLE_NAME": "local-unified-opportunities",
+    "PARTNER_OPPORTUNITIES_TABLE_NAME": "local-partner-opportunities",
+    "PARTNER_ENGAGEMENTS_TABLE_NAME": "local-partner-engagements",
+    "PARTNER_ENGAGEMENT_INVITATIONS_TABLE_NAME": "local-partner-engagement-invitations",
+    "DEEL_PEOPLE_TABLE_NAME": "local-deel-people",
+    "LINEAR_DELIVERY_TABLE_NAME": "local-linear-delivery",
+    "LINEAR_SECRET_NAME": "linear_api_token",
+    "LINEAR_ADMIN_SECRET_NAME": "linear_api_token_with_admin_access",
+    "LINEAR_DATA_BUCKET": "aerostack-dev-linear-data",
+    "PERSON_INFORMATION_TABLE_NAME": "local-person-information",
+    "USER_POOL_ID": "us-east-1_AGtkuUgoC"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Validate Docker on Change",
+  "description": "Checks Dockerfile for security patterns and best practices when container files change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["Dockerfile", "Dockerfile.*", "docker-compose*.yml", ".dockerignore"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Docker configuration files changed. Check for enterprise Docker security patterns: no FROM :latest tags, USER directive present (non-root), no secrets in COPY/ADD commands, .dockerignore covers node_modules/.env/.git, multi-stage build used for production images. Report violations."
+  }
+}

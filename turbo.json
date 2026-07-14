@@ -1,0 +1,92 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "build/**", "cdk.out/**"]
+    },
+    "deploy": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": [
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "CDK_DEFAULT_ACCOUNT",
+        "CDK_DEFAULT_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN",
+        "VITE_AWS_USER_POOL_ID",
+        "VITE_AWS_USER_POOL_APP_CLIENT_ID",
+        "VITE_BASE_URL",
+        "VITE_AWS_REGION"
+      ]
+    },
+    "deploy:prod": {
+      "dependsOn": ["build"],
+      "cache": false,
+      "passThroughEnv": [
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "CDK_DEFAULT_ACCOUNT",
+        "CDK_DEFAULT_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN"
+      ]
+    },
+    "bootstrap": {
+      "cache": false,
+      "passThroughEnv": [
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "CDK_DEFAULT_ACCOUNT",
+        "CDK_DEFAULT_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN"
+      ]
+    },
+    "bootstrap:prod": {
+      "cache": false,
+      "passThroughEnv": [
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "CDK_DEFAULT_ACCOUNT",
+        "CDK_DEFAULT_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN"
+      ]
+    },
+    "synth": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "diff": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {},
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "dev:k8s": {
+      "cache": false,
+      "persistent": true
+    },
+    "dev:docker": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

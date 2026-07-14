@@ -1,0 +1,50 @@
+apiVersion: v2
+name: agentic-devops-showcase
+description: Agentic DevOps Showcase on Kubernetes
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - agentic-devops
+  - showcase
+  - kubernetes
+  - backend
+  - microservices
+  - squid
+home: https://github.com/agentic-devops/showcase
+sources:
+  - https://github.com/agentic-devops/showcase
+maintainers:
+  - name: Agentic DevOps Team
+    email: team@agentic-devops.local
+
+dependencies:
+  - name: mongodb
+    version: 13.12.25
+    repository: https://charts.bitnami.com/bitnami
+    condition: mongodb.enabled
+  - name: postgresql
+    version: 12.5.31
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 17.10.8
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: prometheus
+    version: 25.8.0
+    repository: https://prometheus-community.github.io/helm-charts
+    condition: monitoring.enabled
+  - name: grafana
+    version: 7.0.19
+    repository: https://grafana.github.io/helm-charts
+    condition: monitoring.enabled
+  - name: nginx-ingress
+    version: 9.7.13
+    repository: https://kubernetes.github.io/ingress-nginx
+    condition: ingress.enabled
+  - name: cert-manager
+    version: v1.13.3
+    repository: https://charts.jetstack.io
+    condition: cert-manager.enabled
+

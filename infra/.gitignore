@@ -1,0 +1,37 @@
+# CDK synthesized templates & assets
+cdk.out/
+cdk.context.json
+
+# AWS credentials & config
+.aws-config
+.aws/credentials
+.aws/config
+
+# CDK CLI cache
+~/.cdk
+
+# Node modules
+node_modules/
+.pnp
+.npmrc
+pnpm-lock.yaml
+
+# TypeScript
+*.tsbuildinfo
+dist/
+build/
+
+# Logs & coverage
+*.log
+coverage/
+.nyc_output
+
+# Editor & OS
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Testing
+.env.local
+.env.*.local

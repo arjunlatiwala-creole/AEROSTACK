@@ -1,0 +1,5 @@
+{
+  "httpMethod": "POST",
+  "path": "/zoomhook",
+  "body": "{\"event\":\"recording.completed\",\"payload\":{\"account_id\":\"PCvSzbXiQuShf8xv9ULdNA\",\"object\":{\"uuid\":\"test123\",\"id\":\"7049931200\",\"host_id\":\"host123\",\"topic\":\"Test Meeting\",\"type\":2,\"start_time\":\"2024-01-20T10:00:00Z\",\"duration\":60,\"timezone\":\"UTC\",\"host_email\":\"test@example.com\",\"total_size\":\"1000000\",\"recording_count\":1}}}"
+}

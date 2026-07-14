@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Agent Config Validation",
+  "description": "Validates Bedrock agent configurations for missing guardrails, overly broad permissions, and hardcoded model IDs.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["infra/lib/**/*agent*.ts", "infra/lib/**/*guardrail*.ts", "src/**/agent*.ts", "src/**/agent*.py", "agents/**/*"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Agent configuration files changed. Check against enterprise agentic AI standards: guardrail attachment required, no hardcoded model IDs (use configuration), single responsibility per agent, human-in-the-loop for data-modifying actions, max_tokens set, proper error handling. Scan for overly broad IAM permissions (wildcard resources/actions)."
+  }
+}

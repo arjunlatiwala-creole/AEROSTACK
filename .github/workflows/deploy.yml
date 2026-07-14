@@ -1,0 +1,149 @@
+name: Deploy Aerostack (enterprise-internal-aerostack · 759945100661)
+
+# Single source of truth for Aerostack deploys to the enterprise-internal-aerostack account.
+# Auth via GitHub OIDC (no AWS keys). Account ID + role are PINNED literals so
+# this pipeline can NEVER target another account, even if repo secrets exist.
+#   push to `dev`  -> environment "new-account-dev"  -> DEV stage  (unsuffixed Aerostack-* stacks)
+#   push to `main` -> environment "new-account-prod" -> PROD stage (Aerostack-*-prod stacks)
+# (Replaces the legacy k8s-deploy.yml old-account pipeline and the new-dev/new-main split.)
+
+on:
+  push:
+    branches: [dev, main]
+  workflow_dispatch: {}   # manual prod/dev deploy; also used by promote.yml after it pushes main
+
+permissions:
+  contents: read
+  id-token: write   # required for AWS OIDC
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'new-account-prod' || 'new-account-dev' }}
+    env:
+      NODE_ENV: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      # SAFETY: pinned literals — enterprise-internal-aerostack (759945100661), last-4 ...0661.
+      AWS_ACCOUNT_ID: "759945100661"
+      AWS_ROLE_ARN: "arn:aws:iam::759945100661:role/enterprise-aerostack-gha-deploy"
+      CDK_DEFAULT_ACCOUNT: "759945100661"
+      CDK_DEFAULT_REGION: us-east-1
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      # Frontend build-time vars — from GitHub ENVIRONMENT VARIABLES (vars.*).
+      VITE_AWS_REGION: us-east-1
+      VITE_AWS_COGNITO_REGION: us-east-1
+      VITE_AWS_USER_POOL_ID: ${{ vars.VITE_AWS_USER_POOL_ID }}
+      VITE_AWS_USER_POOL_APP_CLIENT_ID: ${{ vars.VITE_AWS_USER_POOL_APP_CLIENT_ID }}
+      VITE_AWS_COGNITO_DOMAIN: ${{ vars.VITE_AWS_COGNITO_DOMAIN }}
+      VITE_OAUTH_REDIRECT_SIGNIN: ${{ vars.VITE_OAUTH_REDIRECT_SIGNIN }}
+      VITE_OAUTH_REDIRECT_SIGNOUT: ${{ vars.VITE_OAUTH_REDIRECT_SIGNOUT }}
+      VITE_BASE_URL: ${{ vars.VITE_BASE_URL }}
+      VITE_MODULES_API_URL: ${{ vars.VITE_MODULES_API_URL }}
+      VITE_Aerostack_BASE_URL: ${{ vars.VITE_Aerostack_BASE_URL }}
+      VITE_HIRING_BASE_URL: ${{ vars.VITE_HIRING_BASE_URL }}
+      VITE_TOOLS_API_URL: ${{ vars.VITE_TOOLS_API_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # full history so the Slack step can diff against the previous tag/commit
+
+      - uses: pnpm/action-setup@v6
+        # pnpm version is read from the root package.json "packageManager" field
+        # (single source of truth — see monorepo-standards.md). Do not pin here too.
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build & unit tests (gate)
+        # Release only posts when build + unit tests pass.
+        run: |
+          pnpm --filter @enterprise/common build
+          pnpm --filter infra build
+          ( cd infra && pnpm dlx vitest@2 run src/functions/revops/aggregations.test.ts )
+          ( cd common && pnpm dlx vitest@2 run src/utils/cs.test.ts )
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}   # PINNED to enterprise-internal-aerostack
+          role-session-name: gha-aerostack-${{ github.ref_name }}
+
+      - name: Confirm target account
+        run: |
+          ACCT=$(aws sts get-caller-identity --query Account --output text)
+          echo "Deploying as account: $ACCT (stage=$NODE_ENV)"
+          test "$ACCT" = "$AWS_ACCOUNT_ID" || { echo "Wrong account ($ACCT)!"; exit 1; }
+
+      - name: Bootstrap CDK if needed
+        run: |
+          aws cloudformation describe-stacks --stack-name CDKToolkit >/dev/null 2>&1 \
+            || pnpm --filter infra exec cdk bootstrap "aws://$AWS_ACCOUNT_ID/us-east-1"
+
+      - name: Deploy all stacks for the stage
+        id: deploy
+        # NODE_ENV selects dev (unsuffixed) or prod (-prod) stacks; CDK resolves dependency order.
+        run: pnpm --filter infra exec cdk deploy --all --require-approval never --concurrency 3
+
+      # Slack release summary — Kestrel slack-syndication pattern. Token read from
+      # Secrets Manager (slack_bot_token) post-OIDC; no GitHub secret needed.
+      # Channel: int-ai-enterpriseinternal-aerostack-chat-dev-ops. Best-effort / non-blocking.
+      - name: Slack release summary
+        if: always()
+        env:
+          SLACK_CHANNEL: "int-ai-enterpriseinternal-aerostack-chat-dev-ops"
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          STAGE: ${{ env.NODE_ENV }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TOKEN=$(aws secretsmanager get-secret-value --region us-east-1 \
+            --secret-id slack_bot_token --query SecretString --output text 2>/dev/null \
+            | python3 -c "import sys,json;print(json.load(sys.stdin).get('slack_bot_token',''))" || true)
+          if [ -z "$TOKEN" ]; then echo "no slack_bot_token; skipping (best-effort)"; exit 0; fi
+          # Changelog since the previous deploy commit (best-effort).
+          CHANGES=$(git log --oneline -10 --no-merges 2>/dev/null | sed 's/^[a-f0-9]\{7,\}/•/' | head -10)
+          python3 - <<PY
+          import json, os, urllib.request
+          tok = "$TOKEN"
+          ok = os.environ["DEPLOY_OUTCOME"] == "success"
+          icon = "✅" if ok else "❌"
+          verb = "released to" if ok else "FAILED releasing to"
+          changes = """${CHANGES}""".strip()
+          text = (
+              f"{icon} *Aerostack {verb} enterprise-aerostack (…0661) · {os.environ['STAGE']}*\n"
+              f"• branch `{os.environ['REF']}`  commit `{os.environ['SHA'][:7]}`  by {os.environ['ACTOR']}\n"
+              f"• <{os.environ['RUN_URL']}|pipeline run>\n"
+          )
+          if changes:
+              text += "*Recent changes:*\n" + changes
+          # resolve channel id, join (public), post
+          def api(method, payload=None):
+              url = f"https://slack.com/api/{method}"
+              data = json.dumps(payload).encode() if payload else None
+              req = urllib.request.Request(url, data=data,
+                  headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json; charset=utf-8"})
+              return json.loads(urllib.request.urlopen(req, timeout=10).read())
+          try:
+              lst = api("conversations.list?types=public_channel&limit=1000")
+              cid = next((c["id"] for c in lst.get("channels", []) if c["name"] == os.environ["SLACK_CHANNEL"]), "")
+              if cid:
+                  try: api("conversations.join", {"channel": cid})
+                  except Exception: pass
+                  r = api("chat.postMessage", {"channel": cid, "text": text})
+                  print("slack ok" if r.get("ok") else f"slack error: {r.get('error')}")
+              else:
+                  print("channel not found; skipping")
+          except Exception as e:
+              print(f"slack post failed (non-blocking): {e}")
+          PY
+
+      - name: Done
+        run: echo "Deployed $NODE_ENV stage to $AWS_ACCOUNT_ID"

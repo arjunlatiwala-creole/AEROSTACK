@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Environment File Validation",
+  "description": "Checks .env files for accidentally committed secrets and validates structure.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [".env*", "*.env", ".env.local", ".env.development", ".env.production"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "An environment file has been modified. Check for potential secrets (API keys, tokens, passwords with actual values) that should not be committed. Verify the .env file is listed in .gitignore. Flag any NEXT_PUBLIC_ variables that expose sensitive data. Follow enterprise security standards."
+  }
+}

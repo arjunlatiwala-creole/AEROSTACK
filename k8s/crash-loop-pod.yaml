@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: failing-payment-service
+  namespace: aerostack-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: failing-payment-service
+  template:
+    metadata:
+      labels:
+        app: failing-payment-service
+    spec:
+      containers:
+      - name: payment-api
+        image: nginx:latest
+        command: ["/bin/sh", "-c", "echo 'Starting payment service...'; sleep 10; echo 'FATAL: Failed to connect to payment gateway'; exit 1"]
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5

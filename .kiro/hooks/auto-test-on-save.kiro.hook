@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Auto Test on Save",
+  "description": "Runs relevant tests when source or test files change. Uses Vitest for TS/JS and pytest for Python with minimal verbosity.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/**/*.ts", "src/**/*.tsx", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "tests/**/*.py", "src/**/*.py"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A code file has been saved. Run the appropriate tests for this file with minimal verbosity. For TypeScript/JavaScript: npx vitest run --silent --reporter=default. For Python: pytest -q --tb=short -x. If this is a test file, run it directly. If this is a source file, find and run related tests. Report failures concisely."
+  }
+}

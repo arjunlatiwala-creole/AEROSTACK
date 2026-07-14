@@ -1,0 +1,17 @@
+{
+  "workflow": "requirements-first",
+  "spec": "customer-success",
+  "source_prd": "docs/inputs/PRD-Aerostack-Customer-Success-v0.1.md",
+  "tier": "Tier 3 — Aerostack-class business application (managed-services value surface)",
+  "flow": "Delivery + Revenue + Compliance (produces Knowledge)",
+  "build_posture": {
+    "backend": "greenfield additive CS modules (tools-api/functions/cs + infra/src/functions/cs); reuse delivery loops, HubSpot mirror, Deel people, withPermissions",
+    "frontend": "net-new Cloudscape (both enterprise Ops View and Customer View @ portal.enterprise.ai with separate Cognito pool)"
+  },
+  "build_order": "ticketing first (zero external-API dependency) -> tier-0 data surfaces -> composite health -> renewals/csat -> success plans/escalations",
+  "deployment_mode": "enterprise_saas (row-level tenant isolation; relocatable later)",
+  "branch": "dev",
+  "merge_strategy": "direct-to-dev (no PRs)",
+  "deploy_rhythm": "build slice -> deploy to dev -> review -> iterate; never promote to prod",
+  "tenant_discipline": "every CS record carries tenant_id; cross-tenant + cross-CSM reads fail closed; no contact_email in logs"
+}

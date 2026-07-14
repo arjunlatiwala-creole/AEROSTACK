@@ -1,0 +1,11 @@
+# Automation Hooks
+
+This directory contains Kiro automation hooks.
+
+Hooks can trigger on events like:
+- File edits
+- Prompt submissions
+- Agent stops
+- Tool usage
+
+See Kiro documentation for creating hooks.

@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Bundle Size Check",
+  "description": "Checks Next.js bundle size against enterprise performance budgets when source files change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/**/*.ts", "src/**/*.tsx", "package.json"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Source files changed. Run npx next build and check bundle sizes against enterprise budgets: Initial JS < 200KB gzipped, per-route < 50KB, total page < 1MB. Report any routes exceeding budgets and suggest code-splitting opportunities."
+  }
+}

@@ -1,0 +1,281 @@
+# Aerostack V1 - Helm Values Configuration
+# Adapted from enterprise-lyzr-baseline for Aerostack TypeScript/Node.js stack
+
+# Global configuration
+global:
+  environment: production
+  domain: aerostack.enterprise.io
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: "gp2"
+  annotations: {}
+  labels:
+    app.kubernetes.io/part-of: aerostack
+    app.kubernetes.io/managed-by: helm
+
+# Frontend (PWA) configuration
+frontend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: "enterprise/aerostack-frontend"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  
+  service:
+    type: "ClusterIP"
+    port: 80
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+
+# Backend (Squid) configuration
+backend:
+  enabled: true
+  replicaCount: 3
+  debug: false
+  
+  image:
+    repository: "enterprise/aerostack-backend"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  
+  service:
+    type: "ClusterIP"
+    port: 8000
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+  
+  env:
+    - name: NODE_ENV
+      value: "production"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: MONGODB_URL
+      valueFrom:
+        secretKeyRef:
+          name: mongodb-credentials
+          key: url
+    - name: REDIS_URL
+      valueFrom:
+        secretKeyRef:
+          name: redis-credentials
+          key: url
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: aerostack.enterprise.io
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: frontend
+    - host: api.aerostack.enterprise.io
+      paths:
+        - path: /
+          pathType: Prefix
+          backend: backend
+  tls:
+    - secretName: aerostack-tls
+      hosts:
+        - aerostack.enterprise.io
+        - api.aerostack.enterprise.io
+
+# MongoDB configuration (Primary data store for stateless agents)
+mongodb:
+  enabled: true
+  auth:
+    rootPassword: "mongodb-password"  # CHANGE IN PRODUCTION
+    database: "aerostack"
+    username: "agent"
+    password: "agentpass"  # CHANGE IN PRODUCTION
+  architecture: "standalone"  # Use "replicaset" for production
+  replicaCount: 1  # Use 3 for prod
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 50Gi
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  initdbScriptsConfigMap: aerostack-mongodb-init
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# PostgreSQL configuration (Optional - only for specific relational needs)
+postgresql:
+  enabled: false  # Disabled by default, use MongoDB
+  auth:
+    postgresPassword: "postgres-password"
+    database: "agentdb"
+    username: "agent"
+    password: "agentpass"
+  primary:
+    persistence:
+      enabled: true
+      storageClass: "gp2"
+      size: 20Gi
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  architecture: "standalone"  # Use "replication" for prod
+  auth:
+    password: "redis-password"  # CHANGE IN PRODUCTION
+  master:
+    persistence:
+      enabled: true
+      storageClass: "gp2"
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Monitoring configuration
+monitoring:
+  enabled: false  # Enable in production
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: gp2
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 50Gi
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+        requests:
+          cpu: 500m
+          memory: 1Gi
+  grafana:
+    adminPassword: "grafana-password"  # CHANGE IN PRODUCTION
+    persistence:
+      enabled: true
+      storageClassName: gp2
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 250m
+        memory: 512Mi
+
+# Cert-manager configuration
+cert-manager:
+  enabled: true
+  installCRDs: true
+  replicaCount: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+# Network policies
+networkPolicies:
+  enabled: true
+  defaultDeny: false  # Enable true in production
+  allowNamespaces:
+    - kube-system
+    - monitoring
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Security context
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false  # Squid may need write access
+  allowPrivilegeEscalation: false
+
+# Service accounts
+serviceAccounts:
+  create: true
+  annotations: {}
+  automountServiceAccountToken: false
+
+# RBAC
+rbac:
+  create: true
+  rules: []
+
+# Resource quotas
+resourceQuotas:
+  enabled: false  # Enable in multi-tenant environments
+  limits:
+    requests.cpu: "8"
+    requests.memory: "16Gi"
+    limits.cpu: "16"
+    limits.memory: "32Gi"
+    persistentvolumeclaims: "20"
+

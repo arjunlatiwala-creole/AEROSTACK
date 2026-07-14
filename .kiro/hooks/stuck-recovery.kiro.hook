@@ -1,0 +1,1 @@
+{\n  "name": "stuck-recovery",\n  "version": "1.0.0",\n  "enabled": true,\n  "description": "When agent stops without completing all tasks, finds the next pending task and re-prompts to keep dev flowing",\n  "when": {\n    "type": "agentStop"\n  },\n  "then": {\n    "type": "runCommand",\n    "command": "bash .kiro/scripts/check-pending-tasks.sh"\n  }\n}\n

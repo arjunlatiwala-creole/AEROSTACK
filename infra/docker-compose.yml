@@ -1,0 +1,19 @@
+# docker-compose.yml
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local
+    ports: ["8000:8000"]
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb"]
+    volumes:
+      - dynamodb_data:/home/dynamodblocal/data  # Persist data
+    networks:
+      - aerostack-local-net
+
+volumes:
+  dynamodb_data:
+
+networks:
+  aerostack-local-net:
+    name: aerostack-local-net
+    external: true

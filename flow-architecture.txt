@@ -1,0 +1,967 @@
+
+
+Here's the complete, final architecture for the People Ops Hiring Module in Aerostack — covering everything from Will's call through to the screens you'll build.
+
+```
+ ╔══════════════════════════════════════════════════════════════════════╗
+ ║                                                                      ║
+ ║          Aerostack PEOPLE OPS — HIRING MODULE (COMPLETE ARCHITECTURE)     ║
+ ║                                                                      ║
+ ╚══════════════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 1. SYSTEM OVERVIEW
+
+```
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                                                                     │
+ │                        TWO USER TYPES                               │
+ │                                                                     │
+ │   PUBLIC (No Auth)                    INTERNAL (Cognito Auth)       │
+ │   ─────────────────                   ──────────────────────        │
+ │   Candidates applying                 Enterprise team managing           │
+ │   to jobs                             the hiring pipeline          │
+ │                                                                     │
+ │   /careers                            /peopleops/postings          │
+ │   /careers/apply/:id                  /peopleops/hiring-board      │
+ │                                       /peopleops/candidates/:id    │
+ │                                       /peopleops/apply-internal    │
+ │                                                                     │
+ └─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. COMPLETE DATA FLOW
+
+```
+ ╔═══════════════════════════════════════════════════════════════════════╗
+ ║                        ENTRY POINTS                                  ║
+ ╠═══════════════════════════════════════════════════════════════════════╣
+ ║                                                                      ║
+ ║  LinkedIn ─── "Apply: https://app.aerostack.enterprise.com/careers"            ║
+ ║  Website ──── links to /careers                                      ║
+ ║  Email ────── direct link to /careers/apply/:postingId               ║
+ ║  Internal ─── Enterprise team uses /peopleops/apply-internal               ║
+ ║               (referral or manual candidate entry)                   ║
+ ║                                                                      ║
+ ╚════════════════════════════════┬══════════════════════════════════════╝
+                                  │
+                                  v
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                                                                     │
+ │                    PWA-FRONTEND (Vite + React)                      │
+ │                                                                     │
+ │  PUBLIC ROUTES (no auth)          AUTHENTICATED ROUTES (Cognito)   │
+ │  ────────────────────────         ──────────────────────────────   │
+ │                                                                     │
+ │  /careers                         /peopleops/postings              │
+ │    │                                │                               │
+ │    │ GET /postings                  │ GET /postings (all, inc DRAFT)│
+ │    │ (only OPEN ones)               │ POST /postings               │
+ │    v                                │ PUT /postings/:id            │
+ │  Lists job cards                    v                               │
+ │    │                              Manage postings (CRUD)           │
+ │    │ Click "Apply"                                                  │
+ │    v                              /peopleops/hiring-board          │
+ │                                     │                               │
+ │  /careers/apply/:postingId          │ GET /candidates               │
+ │    │                                │ (filter by stage, posting)    │
+ │    │ 1. Fill form                   v                               │
+ │    │ 2. Pick resume file          Kanban board / table view        │
+ │    │ 3. Request presigned URL     (drag between stages)            │
+ │    │ 4. Upload resume → S3                                         │
+ │    │ 5. Submit form data          /peopleops/candidates/:id        │
+ │    │    + s3Key                     │                               │
+ │    v                                │ GET /candidates/:id          │
+ │  POST /candidates/apply             │ PUT /candidates/:id/stage    │
+ │  (public, rate-limited)             │ PUT /candidates/:id          │
+ │    │                                v                               │
+ │    v                              Candidate detail + stage mgmt    │
+ │  "Application Received"                                             │
+ │  confirmation page                /peopleops/apply-internal        │
+ │                                     │                               │
+ │                                     │ Same form as public but      │
+ │                                     │ pre-fills "source: internal" │
+ │                                     │ and "referrer: current user" │
+ │                                     v                               │
+ │                                   POST /candidates/apply            │
+ │                                   (authenticated version)           │
+ │                                                                     │
+ └──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                v
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                                                                     │
+ │                    API GATEWAY (REST)                                │
+ │                                                                     │
+ │  PUBLIC ENDPOINTS (no Cognito authorizer)                           │
+ │  ────────────────────────────────────────                           │
+ │  GET  /postings                  → get-open-postings               │
+ │  POST /candidates/upload-url     → generate-upload-url             │
+ │  POST /candidates/apply          → candidate-apply                 │
+ │                                                                     │
+ │  Rate limiting: 10 req/min per IP on all public endpoints          │
+ │  WAF: optional, blocks known bots                                   │
+ │                                                                     │
+ │  AUTHENTICATED ENDPOINTS (Cognito authorizer)                       │
+ │  ────────────────────────────────────────────                       │
+ │  GET    /postings/all            → get-all-postings                │
+ │  POST   /postings                → create-posting                  │
+ │  PUT    /postings/:id            → update-posting                  │
+ │  DELETE /postings/:id            → delete-posting                  │
+ │                                                                     │
+ │  GET    /candidates              → get-candidates (query/filter)   │
+ │  GET    /candidates/:id          → get-candidate-detail            │
+ │  PUT    /candidates/:id          → update-candidate                │
+ │  PUT    /candidates/:id/stage    → change-candidate-stage          │
+ │  DELETE /candidates/:id          → archive-candidate               │
+ │                                                                     │
+ │  GET    /candidates/:id/resume-url → get-resume-download-url      │
+ │         (returns presigned GET URL for S3, expires 15 min)         │
+ │                                                                     │
+ └──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                v
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                                                                     │
+ │                    LAMBDA FUNCTIONS                                  │
+ │                                                                     │
+ │  infra/src/functions/hiring/                                        │
+ │  ────────────────────────────                                       │
+ │                                                                     │
+ │  get-open-postings.ts                                               │
+ │    └── Query DDB: postings where status = OPEN                     │
+ │    └── Strip internal fields (createdBy, notes)                    │
+ │    └── Return public-safe posting list                             │
+ │                                                                     │
+ │  generate-upload-url.ts                                             │
+ │    └── Validate: filename, content type (pdf/doc/docx)             │
+ │    └── Generate S3 presigned PUT URL                               │
+ │    └── Key: uploads/pending/{uuid}/{filename}                      │
+ │    └── Expires: 5 minutes                                          │
+ │    └── Return { uploadUrl, s3Key }                                 │
+ │                                                                     │
+ │  candidate-apply.ts                                                 │
+ │    └── Validate input (Zod)                                        │
+ │    └── Verify postingId exists and is OPEN                         │
+ │    └── Verify s3Key exists in S3                                   │
+ │    └── Move file: uploads/pending/... → {candidateId}/resume/...   │
+ │    └── Create candidate record in DDB                              │
+ │    └── Emit EventBridge: candidate.created                         │
+ │    └── Return 201                                                  │
+ │                                                                     │
+ │  change-candidate-stage.ts                                          │
+ │    └── Validate stage transition is allowed                        │
+ │    └── Update DDB: stage, stageHistory[], updatedAt                │
+ │    └── Emit EventBridge: candidate.stage_changed                   │
+ │    └── Return updated candidate                                    │
+ │                                                                     │
+ │  get-candidates.ts                                                  │
+ │    └── Query by: postingId, stage, or all                          │
+ │    └── Supports pagination                                         │
+ │    └── Returns list for hiring board                               │
+ │                                                                     │
+ │  create-posting.ts / update-posting.ts                              │
+ │    └── CRUD for job postings                                       │
+ │    └── Only authenticated users with hiring_manager role           │
+ │                                                                     │
+ └──────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                v
+ ┌─────────────────────────────────────────────────────────────────────┐
+ │                                                                     │
+ │                    DATA LAYER                                       │
+ │                                                                     │
+ │  ┌───────────────────────────────────────────────────────────────┐  │
+ │  │  DynamoDB: aerostack-job-postings                                  │  │
+ │  │                                                               │  │
+ │  │  PK: postingId (ULID)                                        │  │
+ │  │                                                               │  │
+ │  │  {                                                            │  │
+ │  │    postingId, title, department, location,                    │  │
+ │  │    description, requirements, status,                         │  │
+ │  │    createdBy, createdAt, updatedAt                            │  │
+ │  │  }                                                            │  │
+ │  │                                                               │  │
+ │  │  status: DRAFT | OPEN | CLOSED | ARCHIVED                    │  │
+ │  │                                                               │  │
+ │  │  GSI: status-createdAt-index                                  │  │
+ │  │    → query all OPEN postings, sorted by newest                │  │
+ │  │                                                               │  │
+ │  └───────────────────────────────────────────────────────────────┘  │
+ │                                                                     │
+ │  ┌───────────────────────────────────────────────────────────────┐  │
+ │  │  DynamoDB: aerostack-candidates                                    │  │
+ │  │                                                               │  │
+ │  │  PK: candidateId (ULID)                                      │  │
+ │  │                                                               │  │
+ │  │  {                                                            │  │
+ │  │    candidateId, name, email, phone,                           │  │
+ │  │    postingId, stage, owner,                                   │  │
+ │  │    resumeS3Key, source, sourceChannel,                        │  │
+ │  │    referrer, notes, coverLetter,                              │  │
+ │  │    submittedAt, updatedAt,                                    │  │
+ │  │    stageHistory: [                                            │  │
+ │  │      { stage, enteredAt, exitedAt, changedBy }                │  │
+ │  │    ],                                                         │  │
+ │  │    disposition: null | RECYCLED | ELIMINATED | REFERRED_OUT,  │  │
+ │  │    dispositionReason, dispositionDate,                        │  │
+ │  │    recycleDate,  (when to re-engage if RECYCLED)              │  │
+ │  │    mailingAddress, (collected at proposal stage)               │  │
+ │  │    deelEmployeeId, (set when Deel record created)             │  │
+ │  │    googleWorkspaceEmail (set when GWS account created)        │  │
+ │  │  }                                                            │  │
+ │  │                                                               │  │
+ │  │  GSI: postingId-stage-index                                   │  │
+ │  │    → all candidates for a posting, grouped by stage           │  │
+ │  │                                                               │  │
+ │  │  GSI: stage-updatedAt-index                                   │  │
+ │  │    → all candidates at a stage, sorted by recency             │  │
+ │  │                                                               │  │
+ │  │  GSI: email-index                                             │  │
+ │  │    → lookup/dedup by email                                    │  │
+ │  │                                                               │  │
+ │  │  GSI: owner-stage-index                                       │  │
+ │  │    → "show me all MY candidates and their stages"             │  │
+ │  │                                                               │  │
+ │  └───────────────────────────────────────────────────────────────┘  │
+ │                                                                     │
+ │  ┌───────────────────────────────────────────────────────────────┐  │
+ │  │  S3: aerostack-hiring-artifacts                                    │  │
+ │  │                                                               │  │
+ │  │  /uploads/pending/{uuid}/{filename}   ← presigned upload      │  │
+ │  │  /{candidateId}/resume/{filename}     ← permanent storage     │  │
+ │  │  /{candidateId}/nda/{filename}        ← signed NDA            │  │
+ │  │  /{candidateId}/proposal/{filename}   ← job proposal doc      │  │
+ │  │  /templates/nda/enterprise-nda-current.pdf  ← golden NDA copy       │  │
+ │  │                                                               │  │
+ │  │  Bucket policy: BlockAllPublicAccess = true                   │  │
+ │  │  Access: presigned URLs only (GET for download, PUT for upload)│  │
+ │  │  Encryption: S3-managed (SSE-S3)                              │  │
+ │  │  Lifecycle: /uploads/pending/* auto-delete after 24 hours     │  │
+ │  │                                                               │  │
+ │  └───────────────────────────────────────────────────────────────┘  │
+ │                                                                     │
+ │  ┌───────────────────────────────────────────────────────────────┐  │
+ │  │  EventBridge: aerostack-events bus                                 │  │
+ │  │                                                               │  │
+ │  │  Events:                                                      │  │
+ │  │    candidate.created        → Slack notify hiring owner       │  │
+ │  │    candidate.stage_changed  → Slack notify, trigger actions   │  │
+ │  │    candidate.disposed       → cleanup, send rejection email   │  │
+ │  │    posting.opened           → (future) auto-post to LinkedIn  │  │
+ │  │    posting.closed           → (future) notify active cands    │  │
+ │  │                                                               │  │
+ │  └───────────────────────────────────────────────────────────────┘  │
+ │                                                                     │
+ └─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. HIRING PIPELINE STAGES (State Machine)
+
+```
+ ╔══════════════════════════════════════════════════════════════════════╗
+ ║                  CANDIDATE STAGE STATE MACHINE                      ║
+ ╠══════════════════════════════════════════════════════════════════════╣
+ ║                                                                      ║
+ ║                      ┌──────────────┐                               ║
+ ║                      │  SUBMISSION  │ (10% probability)             ║
+ ║                      │              │ Form submitted, resume in S3  ║
+ ║                      └──────┬───────┘                               ║
+ ║                             │                                        ║
+ ║                             v                                        ║
+ ║                      ┌──────────────┐                               ║
+ ║                      │ FIRST_TOUCH  │ Someone from Enterprise calls       ║
+ ║                      │              │ Disambiguate role/purpose     ║
+ ║                      └──────┬───────┘                               ║
+ ║                             │                                        ║
+ ║                             v                                        ║
+ ║                      ┌──────────────┐                               ║
+ ║                      │   NDA_SENT   │ NDA sent for signature        ║
+ ║                      │              │ Must be signed before         ║
+ ║                      └──────┬───────┘ interviews begin              ║
+ ║                             │                                        ║
+ ║                             v                                        ║
+ ║                      ┌──────────────┐                               ║
+ ║                      │  NDA_SIGNED  │ Candidate signed NDA          ║
+ ║                      │              │ Ready for interviews          ║
+ ║                      └──────┬───────┘                               ║
+ ║                             │                                        ║
+ ║                     ┌───────┴───────┐                               ║
+ ║                     v               v                                ║
+ ║              ┌─────────────┐ ┌─────────────┐                       ║
+ ║              │ CULTURE_FIT │ │  ROLE_FIT   │  Can happen in        ║
+ ║              │             │ │             │  parallel. Both must   ║
+ ║              │ 80% culture │ │ 80% role    │  complete before       ║
+ ║              │ 20% role    │ │ 20% culture │  decision gate.        ║
+ ║              └──────┬──────┘ └──────┬──────┘                       ║
+ ║                     │               │                                ║
+ ║                     └───────┬───────┘                               ║
+ ║                             │                                        ║
+ ║                             v                                        ║
+ ║                      ┌──────────────┐                               ║
+ ║                      │   DECISION   │ Both interviews done          ║
+ ║                      │              │ Team decides next step        ║
+ ║                      └──┬───┬───┬───┘                               ║
+ ║                         │   │   │                                    ║
+ ║            ┌────────────┘   │   └────────────┐                      ║
+ ║            v                v                v                       ║
+ ║     ┌────────────┐  ┌────────────┐  ┌──────────────┐               ║
+ ║     │  PROPOSAL  │  │  RECYCLED  │  │  ELIMINATED  │               ║
+ ║     │            │  │            │  │              │               ║
+ ║     │ Prepare &  │  │ Re-engage  │  │ Not a fit.   │               ║
+ ║     │ send job   │  │ in 1-12    │  │ Send nice    │               ║
+ ║     │ proposal   │  │ months.    │  │ rejection.   │               ║
+ ║     └─────┬──────┘  │ Set date.  │  └──────────────┘               ║
+ ║           │         └────────────┘                                   ║
+ ║           │                                                          ║
+ ║           │         ┌────────────┐                                   ║
+ ║           │         │REFERRED_OUT│ Send to someone else             ║
+ ║           │         └────────────┘                                   ║
+ ║           v                                                          ║
+ ║    ┌──────────────┐                                                 ║
+ ║    │ NEGOTIATION  │ Negotiate terms, commitment call                ║
+ ║    │              │ "Is this what you want?"                        ║
+ ║    └──────┬───────┘                                                 ║
+ ║           │                                                          ║
+ ║           v                                                          ║
+ ║    ┌──────────────┐                                                 ║
+ ║    │  OFFER_SENT  │ Formal offer via Deel                           ║
+ ║    │              │ Candidate signs in Deel                         ║
+ ║    └──────┬───────┘                                                 ║
+ ║           │                                                          ║
+ ║           v                                                          ║
+ ║    ┌──────────────┐                                                 ║
+ ║    │OFFER_ACCEPTED│ Candidate signed                                ║
+ ║    │              │ Trigger: create Google Workspace user           ║
+ ║    │              │ Trigger: assign correct OU                      ║
+ ║    │              │ Trigger: AWS Identity Center policies           ║
+ ║    └──────┬───────┘                                                 ║
+ ║           │                                                          ║
+ ║           v                                                          ║
+ ║    ┌──────────────┐                                                 ║
+ ║    │  ONBOARDING  │ Moodle content assigned                        ║
+ ║    │              │ 1:1 with manager scheduled                     ║
+ ║    │              │ People Ops dashboard created                   ║
+ ║    │              │ Early work requirements set                    ║
+ ║    │              │ Certification goal requested                   ║
+ ║    └──────┬───────┘                                                 ║
+ ║           │                                                          ║
+ ║           v                                                          ║
+ ║    ┌──────────────┐                                                 ║
+ ║    │    ACTIVE    │ Employee is fully onboarded                     ║
+ ║    │              │ Visible in People Ops dashboard                ║
+ ║    └──────────────┘                                                 ║
+ ║                                                                      ║
+ ╚══════════════════════════════════════════════════════════════════════╝
+
+
+ ALLOWED TRANSITIONS:
+ ─────────────────────
+ SUBMISSION     → FIRST_TOUCH
+ FIRST_TOUCH    → NDA_SENT
+ NDA_SENT       → NDA_SIGNED
+ NDA_SIGNED     → CULTURE_FIT | ROLE_FIT
+ CULTURE_FIT    → ROLE_FIT | DECISION (if role_fit already done)
+ ROLE_FIT       → CULTURE_FIT | DECISION (if culture_fit already done)
+ DECISION       → PROPOSAL | RECYCLED | ELIMINATED | REFERRED_OUT
+ PROPOSAL       → NEGOTIATION
+ NEGOTIATION    → OFFER_SENT | RECYCLED | ELIMINATED
+ OFFER_SENT     → OFFER_ACCEPTED | ELIMINATED
+ OFFER_ACCEPTED → ONBOARDING
+ ONBOARDING     → ACTIVE
+
+ ANY STAGE      → ELIMINATED (candidate can drop out anytime)
+ ANY STAGE      → RECYCLED (can be shelved anytime)
+```
+
+---
+
+## 4. FRONTEND SCREENS
+
+```
+ ╔══════════════════════════════════════════════════════════════════════╗
+ ║                    SCREEN MAP (All Pages)                           ║
+ ╠══════════════════════════════════════════════════════════════════════╣
+ ║                                                                      ║
+ ║  PUBLIC (No Auth)                                                    ║
+ ║  ────────────────                                                    ║
+ ║                                                                      ║
+ ║  Screen 1: /careers                                                  ║
+ ║  Screen 2: /careers/apply/:postingId                                 ║
+ ║                                                                      ║
+ ║  AUTHENTICATED (People Ops Section)                                  ║
+ ║  ──────────────────────────────────                                  ║
+ ║                                                                      ║
+ ║  Screen 3: /peopleops/postings                                       ║
+ ║  Screen 4: /peopleops/postings/:id (create/edit)                     ║
+ ║  Screen 5: /peopleops/hiring-board                                   ║
+ ║  Screen 6: /peopleops/candidates/:id                                 ║
+ ║  Screen 7: /peopleops/apply-internal                                 ║
+ ║                                                                      ║
+ ╚══════════════════════════════════════════════════════════════════════╝
+
+
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 1: /careers (Public — Job Listings)
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                                                                 │
+ │  ┌───────────────────────────────────────────────────────────┐  │
+ │  │  Enterprise Careers                                             │  │
+ │  │  Join us in building the future of enterprise operations  │  │
+ │  └───────────────────────────────────────────────────────────┘  │
+ │                                                                 │
+ │  Filter: [All Departments ▼]  [All Locations ▼]                │
+ │                                                                 │
+ │  ┌───────────────────────────────────────────────────────────┐  │
+ │  │  Senior Platform Engineer                                 │  │
+ │  │  Engineering · Remote · Posted 3 days ago                 │  │
+ │  │                                                           │  │
+ │  │  We're looking for a senior engineer to help build        │  │
+ │  │  our core platform infrastructure...                      │  │
+ │  │                                                           │  │
+ │  │                                        [View & Apply →]   │  │
+ │  └───────────────────────────────────────────────────────────┘  │
+ │                                                                 │
+ │  ┌───────────────────────────────────────────────────────────┐  │
+ │  │  RevOps Analyst                                           │  │
+ │  │  Operations · Remote · Posted 1 week ago                  │  │
+ │  │                                                           │  │
+ │  │  Help us scale revenue operations across our              │  │
+ │  │  growing customer base...                                 │  │
+ │  │                                                           │  │
+ │  │                                        [View & Apply →]   │  │
+ │  └───────────────────────────────────────────────────────────┘  │
+ │                                                                 │
+ │  ┌───────────────────────────────────────────────────────────┐  │
+ │  │  Solutions Architect                                      │  │
+ │  │  Delivery · Remote · Posted 2 weeks ago                   │  │
+ │  │                                                           │  │
+ │  │  Work directly with enterprise customers to design        │  │
+ │  │  and deliver cloud-native solutions...                    │  │
+ │  │                                                           │  │
+ │  │                                        [View & Apply →]   │  │
+ │  └───────────────────────────────────────────────────────────┘  │
+ │                                                                 │
+ │  ─────────────────────────────────────────────────────────────  │
+ │  Powered by Aerostack · enterprise.com                                    │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 2: /careers/apply/:postingId (Public — Application Form)
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                                                                 │
+ │  ← Back to all positions                                       │
+ │                                                                 │
+ │  ┌───────────────────────────────────────────────────────────┐  │
+ │  │  Apply for: Senior Platform Engineer                      │  │
+ │  │  Engineering · Remote                                     │  │
+ │  └───────────────────────────────────────────────────────────┘  │
+ │                                                                 │
+ │  Full Name *              [________________________________]    │
+ │                                                                 │
+ │  Email Address *          [________________________________]    │
+ │                                                                 │
+ │  Phone Number             [________________________________]    │
+ │                                                                 │
+ │  Resume / CV *            [Choose File] resume.pdf  ✓ Uploaded  │
+ │                           PDF, DOC, or DOCX · Max 10MB         │
+ │                                                                 │
+ │  How did you hear         [LinkedIn                    ▼]       │
+ │  about this role?           LinkedIn                            │
+ │                             Referral                            │
+ │                             Enterprise Website                        │
+ │                             Job Board                           │
+ │                             Other                               │
+ │                                                                 │
+ │  Referred by              [________________________________]    │
+ │  (optional)                                                     │
+ │                                                                 │
+ │  Anything else you'd      [________________________________]    │
+ │  like us to know?         [________________________________]    │
+ │  (optional)               [________________________________]    │
+ │                                                                 │
+ │                           [Submit Application]                   │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+ After submit:
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                                                                 │
+ │                    ✓ Application Received                        │
+ │                                                                 │
+ │  Thanks for applying to Senior Platform Engineer.               │
+ │  We'll review your application and reach out within             │
+ │  5 business days.                                               │
+ │                                                                 │
+ │                    [View More Positions]                         │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ ═══════════════════════════════
+ 
+
+Continuing from Screen 3 onwards.
+
+```
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 3: /peopleops/postings (Authenticated — Manage Job Postings)
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  People Ops > Job Postings                    [+ New Posting]   │
+ │                                                                 │
+ │  Filter: [All Status ▼]  [All Departments ▼]   🔍 Search...    │
+ │                                                                 │
+ │  ┌──────────────────────────────────────────────────────────┐   │
+ │  │ Title               │ Dept        │ Status │ Candidates │   │
+ │  │                     │             │        │ Count      │   │
+ │  ├─────────────────────┼─────────────┼────────┼────────────┤   │
+ │  │ Sr Platform Engineer│ Engineering │ 🟢 OPEN│     12     │   │
+ │  │ Posted: Apr 10      │             │        │            │   │
+ │  ├─────────────────────┼─────────────┼────────┼────────────┤   │
+ │  │ RevOps Analyst      │ Operations  │ 🟢 OPEN│      7     │   │
+ │  │ Posted: Apr 8       │             │        │            │   │
+ │  ├─────────────────────┼─────────────┼────────┼────────────┤   │
+ │  │ Solutions Architect │ Delivery    │ 🟡DRAFT│      0     │   │
+ │  │ Created: Apr 15     │             │        │            │   │
+ │  ├─────────────────────┼─────────────┼────────┼────────────┤   │
+ │  │ Frontend Developer  │ Engineering │ ⚫CLOSED│     23     │   │
+ │  │ Closed: Mar 20      │             │        │            │   │
+ │  └─────────────────────┴─────────────┴────────┴────────────┘   │
+ │                                                                 │
+ │  Click any row → opens posting detail / edit                    │
+ │  Click candidate count → jumps to hiring board filtered         │
+ │                          by that posting                        │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 4: /peopleops/postings/:id (Authenticated — Create/Edit)
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  People Ops > Job Postings > Edit Posting                       │
+ │                                                                 │
+ │  Status: [DRAFT ▼]  (DRAFT → OPEN → CLOSED → ARCHIVED)        │
+ │                                                                 │
+ │  Job Title *          [Senior Platform Engineer_____________]   │
+ │                                                                 │
+ │  Department *         [Engineering                       ▼]     │
+ │                         Engineering                             │
+ │                         Operations                              │
+ │                         Delivery                                │
+ │                         People Ops                              │
+ │                                                                 │
+ │  Location *           [Remote                            ▼]     │
+ │                         Remote                                  │
+ │                         Hybrid                                  │
+ │                         On-site                                 │
+ │                                                                 │
+ │  Description *        ┌─────────────────────────────────────┐   │
+ │  (Markdown supported) │ We're looking for a senior engineer │   │
+ │                       │ to help build our core platform     │   │
+ │                       │ infrastructure. You'll work on...   │   │
+ │                       │                                     │   │
+ │                       │                                     │   │
+ │                       └─────────────────────────────────────┘   │
+ │                                                                 │
+ │  Requirements         ┌─────────────────────────────────────┐   │
+ │  (Markdown supported) │ - 5+ years TypeScript/Node.js       │   │
+ │                       │ - AWS experience (Lambda, DDB, CDK) │   │
+ │                       │ - Strong system design skills        │   │
+ │                       └─────────────────────────────────────┘   │
+ │                                                                 │
+ │  Hiring Owner *       [will@enterprise.com                     ▼]     │
+ │  (who gets notified                                             │
+ │   on new applicants)                                            │
+ │                                                                 │
+ │  ┌─────────────────────────────────────────────────────────┐    │
+ │  │  Public URL (when OPEN):                                │    │
+ │  │  https://app.aerostack.enterprise.com/careers/apply/posting_abc123 │    │
+ │  │                                              [📋 Copy]  │    │
+ │  └─────────────────────────────────────────────────────────┘    │
+ │                                                                 │
+ │                              [Cancel]  [Save Draft]  [Publish]  │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 5: /peopleops/hiring-board (Authenticated — Kanban Board)
+ ═══════════════════════════════════════════════════════════════════
+
+ This is the main screen Will cares about — "where is this
+ candidate, who owns the next step, and is it going okay?"
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  People Ops > Hiring Board                                      │
+ │                                                                 │
+ │  Posting: [All Postings              ▼]   Owner: [All    ▼]    │
+ │  View:    (●) Kanban  ( ) Table               [+ Add Candidate] │
+ │                                                                 │
+ │  ◄ scroll ─────────────────────────────────────────── scroll ►  │
+ │                                                                 │
+ │ ┌────────────┐┌────────────┐┌────────────┐┌────────────┐       │
+ │ │ SUBMISSION ││FIRST_TOUCH ││  NDA_SENT  ││ NDA_SIGNED │       │
+ │ │    (5)     ││    (3)     ││    (2)     ││    (1)     │       │
+ │ ├────────────┤├────────────┤├────────────┤├────────────┤       │
+ │ │            ││            ││            ││            │       │
+ │ │┌──────────┐││┌──────────┐││┌──────────┐││┌──────────┐│       │
+ │ ││Jane D.   ││││Bob K.    ││││Maria L.  ││││Alex P.   ││       │
+ │ ││Sr Eng    ││││RevOps    ││││Sr Eng    ││││Sr Eng    ││       │
+ │ ││Apr 15    ││││Apr 12    ││││Apr 10    ││││Apr 8     ││       │
+ │ ││Owner: —  ││││Owner:Will││││Owner:Will││││Owner:Page││       │
+ │ │└──────────┘│││          ││││          ││││          ││       │
+ │ │┌──────────┐│││┌──────────┐│└──────────┘││└──────────┘│       │
+ │ ││Tom R.    ││││Sarah M.  │││┌──────────┐││            │       │
+ │ ││RevOps    ││││Sr Eng    ││││Chris W.  │││            │       │
+ │ ││Apr 14    ││││Apr 11    ││││RevOps    │││            │       │
+ │ ││Owner: —  ││││Owner:Kyle││││Apr 9     │││            │       │
+ │ │└──────────┘│││          ││││Owner:Will│││            │       │
+ │ │┌──────────┐││└──────────┘│││          │││            │       │
+ │ ││Kim S.    ││││┌──────────┐││└──────────┘││            │       │
+ │ ││Sol Arch  ││││Dev T.    │││            ││            │       │
+ │ ││Apr 14    ││││Sol Arch  │││            ││            │       │
+ │ ││Owner: —  ││││Apr 10    │││            ││            │       │
+ │ │└──────────┘││││Owner:Page│││            ││            │       │
+ │ │...2 more  │││└──────────┘│││            ││            │       │
+ │ └────────────┘└────────────┘└────────────┘└────────────┘       │
+ │                                                                 │
+ │ ┌────────────┐┌────────────┐┌────────────┐┌────────────┐       │
+ │ │CULTURE_FIT ││ ROLE_FIT   ││  DECISION  ││  PROPOSAL  │       │
+ │ │    (1)     ││    (1)     ││    (0)     ││    (1)     │       │
+ │ ├────────────┤├────────────┤├────────────┤├────────────┤       │
+ │ │┌──────────┐││┌──────────┐││            ││┌──────────┐│       │
+ │ ││Alex P.   ││││Priya R.  │││  No cards  ││││Sam H.    ││       │
+ │ ││Sr Eng    ││││Sr Eng    │││            ││││RevOps    ││       │
+ │ ││Interviewer│││Interviewer│││            ││││Sent Apr 5││       │
+ │ ││: Anvitha ││││: Kyle    │││            ││││Owner:Will││       │
+ │ │└──────────┘││└──────────┘│││            │││└──────────┘│       │
+ │ └────────────┘└────────────┘└────────────┘└────────────┘       │
+ │                                                                 │
+ │ ┌────────────┐┌────────────┐┌────────────┐┌────────────┐       │
+ │ │NEGOTIATION ││ OFFER_SENT ││OFFER_ACCEPT ││ ONBOARDING │       │
+ │ │    (0)     ││    (1)     ││    (0)      ││    (1)     │       │
+ │ ├────────────┤├────────────┤├────────────┤├────────────┤       │
+ │ │            ││┌──────────┐││            ││┌──────────┐│       │
+ │ │  No cards  ││││Brandon W.│││  No cards  ││││Lisa M.   ││       │
+ │ │            ││││Sr Eng    │││            ││││RevOps    ││       │
+ │ │            ││││Deel: sent│││            ││││Day 3     ││       │
+ │ │            ││││Owner:Will│││            ││││Owner:Will││       │
+ │ │            │││└──────────┘││            │││└──────────┘│       │
+ │ └────────────┘└────────────┘└────────────┘└────────────┘       │
+ │                                                                 │
+ │  Drag cards between columns to change stage.                    │
+ │  Click card → opens candidate detail (Screen 6).                │
+ │                                                                 │
+ │  ─────────────────────────────────────────────────────────────  │
+ │  DISPOSED CANDIDATES (collapsed by default)          [Expand ▼] │
+ │  Eliminated: 4 · Recycled: 2 · Referred Out: 1                 │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ TABLE VIEW (alternate toggle):
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  Name       │ Position    │ Stage       │ Owner │ Days in │ Act│
+ │             │             │             │       │ Stage   │    │
+ ├─────────────┼─────────────┼─────────────┼───────┼─────────┼────┤
+ │ Jane D.     │ Sr Engineer │ SUBMISSION  │  —    │   2     │ ⋮  │
+ │ Bob K.      │ RevOps      │ FIRST_TOUCH │ Will  │   5     │ ⋮  │
+ │ Maria L.    │ Sr Engineer │ NDA_SENT    │ Will  │   3     │ ⋮  │
+ │ Alex P.     │ Sr Engineer │ CULTURE_FIT │ Page  │   1     │ ⋮  │
+ │ Sam H.      │ RevOps      │ PROPOSAL    │ Will  │   4     │ ⋮  │
+ │ Brandon W.  │ Sr Engineer │ OFFER_SENT  │ Will  │   2     │ ⋮  │
+ │ Lisa M.     │ RevOps      │ ONBOARDING  │ Will  │   3     │ ⋮  │
+ └─────────────┴─────────────┴─────────────┴───────┴─────────┴────┘
+ │                                                                 │
+ │  "Days in Stage" highlights stale candidates:                   │
+ │    Green: 0-3 days · Yellow: 4-7 days · Red: 8+ days           │
+ │    This is how Will catches dropped balls.                      │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 6: /peopleops/candidates/:id (Authenticated — Detail View)
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  People Ops > Hiring Board > Alex P.              [← Back]     │
+ │                                                                 │
+ │  ┌─────────────────────────────┬───────────────────────────┐    │
+ │  │                             │                           │    │
+ │  │  Alex P.                    │  Current Stage            │    │
+ │  │  alex.p@email.com           │  ┌─────────────────────┐  │    │
+ │  │  +1 555-0123                │  │   CULTURE_FIT       │  │    │
+ │  │                             │  │   Since: Apr 14     │  │    │
+ │  │  Position: Sr Platform Eng  │  │   Days: 3           │  │    │
+ │  │  Source: LinkedIn           │  └─────────────────────┘  │    │
+ │  │  Referred by: Kyle          │                           │    │
+ │  │  Applied: Apr 8, 2026       │  Owner: [Paige       ▼]  │    │
+ │  │                             │                           │    │
+ │  │  Resume: [📄 Download]      │  [Advance Stage ▼]       │    │
+ │  │                             │    → ROLE_FIT             │    │
+ │  │                             │    → DECISION             │    │
+ │  │                             │    → ELIMINATED           │    │
+ │  │                             │    → RECYCLED             │    │
+ │  │                             │                           │    │
+ │  └─────────────────────────────┴───────────────────────────┘    │
+ │                                                                 │
+ │  ┌─────────────────────────────────────────────────────────┐    │
+ │  │  STAGE TIMELINE                                         │    │
+ │  │                                                         │    │
+ │  │  ● SUBMISSION ─── Apr 8 ──── auto (form submit)        │    │
+ │  │  │                                                      │    │
+ │  │  ● FIRST_TOUCH ── Apr 9 ──── Will Horn                 │    │
+ │  │  │  Notes: "Strong AWS background, good energy"         │    │
+ │  │  │                                                      │    │
+ │  │  ● NDA_SENT ───── Apr 10 ─── Will Horn                 │    │
+ │  │  │                                                      │    │
+ │  │  ● NDA_SIGNED ─── Apr 11 ─── auto (signature received) │    │
+ │  │  │                                                      │    │
+ │  │  ● CULTURE_FIT ── Apr 14 ─── Paige                     │    │
+ │  │  │  Interviewer: Anvitha                                │    │
+ │  │  │  Notes: "Great culture alignment, collaborative"     │    │
+ │  │  ◌  (current stage — in progress)                       │    │
+ │  │                                                         │    │
+ │  └─────────────────────────────────────────────────────────┘    │
+ │                                                                 │
+ │  ┌─────────────────────────────────────────────────────────┐    │
+ │  │  NOTES & ACTIVITY                                       │    │
+ │  │                                                         │    │
+ │  │  Add note: [________________________________] [Post]    │    │
+ │  │                                                         │    │
+ │  │  Apr 14 — Paige: "Scheduled culture fit with Anvitha   │    │
+ │  │           for Apr 16 at 2pm"                            │    │
+ │  │  Apr 10 — Will: "Sent NDA via email, awaiting sig"     │    │
+ │  │  Apr 9  — Will: "Had first call. Impressive candidate. │    │
+ │  │           Wants to work on infra. Moving to NDA."       │    │
+ │  │                                                         │    │
+ │  └─────────────────────────────────────────────────────────┘    │
+ │                                                                 │
+ │  ┌─────────────────────────────────────────────────────────┐    │
+ │  │  DOCUMENTS                                              │    │
+ │  │                                                         │    │
+ │  │  📄 Resume — alex-p-resume.pdf          [Download]      │    │
+ │  │  📄 NDA — enterprise-nda-signed-alex-p.pdf    [Download]      │    │
+ │  │  📄 Proposal — (not yet created)                        │    │
+ │  │                                                         │    │
+ │  │                                [Upload Document]        │    │
+ │  └─────────────────────────────────────────────────────────┘    │
+ │                                                                 │
+ │  ┌─────────────────────────────────────────────────────────┐    │
+ │  │  DISPOSITION (only shown if ELIMINATED/RECYCLED)        │    │
+ │  │                                                         │    │
+ │  │  Action: [Eliminate ▼]                                  │    │
+ │  │  Reason: [________________________________]             │    │
+ │  │  Re-engage date (if recycle): [____/____/________]      │    │
+ │  │                                                         │    │
+ │  │                                        [Confirm]        │    │
+ │  └─────────────────────────────────────────────────────────┘    │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+
+
+ ═══════════════════════════════════════════════════════════════════
+ SCREEN 7: /peopleops/apply-internal (Authenticated — Referral)
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │  People Ops > Submit Candidate (Internal Referral)              │
+ │                                                                 │
+ │  You're submitting a candidate on behalf of Enterprise.              │
+ │  Referrer will be set to your account automatically.            │
+ │                                                                 │
+ │  Position *           [Senior Platform Engineer          ▼]     │
+ │                       (dropdown of all OPEN postings)           │
+ │                                                                 │
+ │  Candidate Name *     [________________________________]        │
+ │                                                                 │
+ │  Candidate Email *    [________________________________]        │
+ │                                                                 │
+ │  Candidate Phone      [________________________________]        │
+ │                                                                 │
+ │  Resume *             [Choose File] resume.pdf  ✓ Uploaded      │
+ │                                                                 │
+ │  How do you know      [________________________________]        │
+ │  this person?         [________________________________]        │
+ │                                                                 │
+ │  Recommended for      [________________________________]        │
+ │  (role notes)         [________________________________]        │
+ │                                                                 │
+ │  Initial Stage        [SUBMISSION ▼]                            │
+ │                        SUBMISSION (default)                     │
+ │                        FIRST_TOUCH (if you've already talked)   │
+ │                                                                 │
+ │                       [Submit Candidate]                         │
+ │                                                                 │
+ │  Source will be auto-set to "internal_referral"                 │
+ │  Referrer will be auto-set to: will@enterprise.com (your email)      │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. RESUME UPLOAD FLOW (Presigned URL — Detailed)
+
+```
+ ═══════════════════════════════════════════════════════════════════
+ PRESIGNED URL UPLOAD SEQUENCE (Both Public & Internal Forms)
+ ═══════════════════════════════════════════════════════════════════
+
+ Browser                      API Gateway / Lambda              S3
+    │                                │                          │
+    │ 1. User selects file           │                          │
+    │    (client validates:          │                          │
+    │     type, size < 10MB)         │                          │
+    │                                │                          │
+    │ 2. POST /candidates/           │                          │
+    │    upload-url                   │                          │
+    │    { filename: "resume.pdf",   │                          │
+    │      contentType: "app/pdf" }  │                          │
+    │ ──────────────────────────────>│                          │
+    │                                │                          │
+    │                         3. Lambda:                        │
+    │                            - validate file type           │
+    │                            - generate UUID                │
+    │                            - create presigned PUT URL     │
+    │                              key: uploads/pending/        │
+    │                                   {uuid}/resume.pdf      │
+    │                              expires: 5 min               │
+    │                              conditions:                  │
+    │                                content-type match         │
+    │                                max size: 10MB             │
+    │                                │                          │
+    │ 4. Response:                   │                          │
+    │    { uploadUrl: "https://      │                          │
+    │      s3.amazonaws.com/...",    │                          │
+    │      s3Key: "uploads/          │                          │
+    │        pending/{uuid}/         │                          │
+    │        resume.pdf" }           │                          │
+    │ <──────────────────────────────│                          │
+    │                                │                          │
+    │ 5. PUT file directly to S3     │                          │
+    │    (browser → S3, bypasses     │                          │
+    │     Lambda entirely)           │                          │
+    │ ─────────────────────────────────────────────────────────>│
+    │                                │                          │
+    │ 6. S3 returns 200             │                          │
+    │ <─────────────────────────────────────────────────────────│
+    │                                │                          │
+    │ 7. UI shows ✓ Uploaded         │                          │
+    │    Stores s3Key in form state  │                          │
+    │                                │                          │
+    │ 8. User clicks "Submit"        │                          │
+    │    POST /candidates/apply      │                          │
+    │    { name, email, phone,       │                          │
+    │      postingId, s3Key,         │                          │
+    │      source, ... }             │                          │
+    │ ──────────────────────────────>│                          │
+    │                                │                          │
+    │                         9. Lambda:                        │
+    │                            - validate all fields          │
+    │                            - verify s3Key exists ────────>│
+    │                            - headObject check    <────────│
+    │                            - generate candidateId         │
+    │                            - copyObject: move from        │
+    │                              uploads/pending/{uuid}/      │
+    │                              → {candidateId}/resume/      │
+    │                            - deleteObject: remove ───────>│
+    │                              pending copy                 │
+    │                            - create DDB record            │
+    │                            - emit EventBridge event       │
+    │                                │                          │
+    │ 10. Response: 201              │                          │
+    │     { candidateId, message }   │                          │
+    │ <──────────────────────────────│                          │
+    │                                │                          │
+    │ 11. Show confirmation page     │                          │
+    │                                │                          │
+
+
+ S3 LIFECYCLE RULE:
+ ──────────────────
+ uploads/pending/* → auto-delete after 24 hours
+ (catches abandoned uploads where user never submitted the form)
+```
+
+---
+
+## 6. EVENT-DRIVEN AUTOMATION
+
+```
+ ═══════════════════════════════════════════════════════════════════
+ EVENTBRIDGE RULES & AUTOMATIONS
+ ═══════════════════════════════════════════════════════════════════
+
+ ┌─────────────────────────────────────────────────────────────────┐
+ │                                                                 │
+ │  EVENT: candidate.created                                       │
+ │  ─────────────────────────                                      │
+ │  Fired when: new application submitted (public or internal)    │
+ │                                                                 │
+ │  Rule 1 → Lambda: notify-hiring-owner                          │
+ │           Sends Slack message to posting's hiring owner:        │
+ │           "New applicant: Jane D. for Sr Platform Engineer"     │
+ │           Includes link to candidate detail in Aerostack             │
+ │                                                                 │
+ │  Rule 2 → Lambda: send-candidate-ack (future)                  │
+ │           Sends email to candidate:                             │
+ │           "Thanks for applying, we'll be in touch"              │
+ │                                                                 │
+ │                                                                 │
+ │  EVENT: candidate.stage_changed                                 │
+ │  ──────────────────────────────                                 │
+ │  Fired when: stage is updated via hiring board or detail page  │
+ │  Payload: { candidateId, previousStage, newStage, changedBy }  │
+ │                                                                 │
+ │  Rule 1 → Lambda: notify-stage-change                          │
+ │           Slack: "Alex P. moved from NDA_SIGNED → CULTURE_FIT  │
+ │                   by Paige"                                     │
+ │                                                                 │
+ │  Rule 2 → Lambda: stage-automation (conditional)               │
+ │           if newStage == OFFER_ACCEPTED:                        │
+ │             → trigger Google Workspace user creation            │
+ │             → trigger OU assignment                             │
+ │             → trigger AWS Identity Center setup                 │
+ │           if newStage == ONBOARDING:                            │
+ │             → trigger Moodle content assignment                 │
+ │             → create People Ops dashboard entry                 │
+ │           if newStage == ELIMINATED:                            │
+ │             → send rejection email (future)                     │
+ │                                                                 │
+ │                                                                 │
+ │  EVENT: candidate.disposed                                      │
+ │  ─────────────────────────                                      │
+ │  Fired when: candidate marked ELIMINATED/RECYCLED/REFERRED_OUT │
+ │                                                                 │
+ │  Rule 1 → Lambda: handle-disposition                           │
+ │           if RECYCLED:                                          │
+ │             → schedule re-engagement reminder (EventBridge      │
+ │               scheduled event for recycleDate)                  │
+ │           if ELIMINATED:                                        │
+ │             → send polite rejection email (future)              │
+ │           if REFERRED_OUT:                                      │
+ │             → log referral, notify referrer                     │
+ │                                                                 │
+ └─────────────────────────────────────────────────────────────────┘
+```
+
+---
+

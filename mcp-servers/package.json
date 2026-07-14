@@ -1,0 +1,20 @@
+{
+  "name": "@enterprise/aerostack-mcp-servers",
+  "version": "1.0.0",
+  "description": "MCP servers for Aerostack integrations",
+  "type": "module",
+  "scripts": {
+    "aerostack-api": "tsx aerostack-api-server.ts",
+    "deel": "DEEL_API_TOKEN=$DEEL_API_TOKEN tsx deel-server.ts",
+    "hubspot": "tsx hubspot-server.ts",
+    "slack": "tsx slack-server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
+

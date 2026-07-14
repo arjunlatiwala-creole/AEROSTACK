@@ -1,0 +1,33 @@
+{
+    "Parameters": {
+        "AWS_SAM_LOCAL": "true",
+        "LOOPS_TABLE_NAME": "local-loops",
+        "LOOP_FINANCIALS_TABLE_NAME": "local-loop-financials",
+        "DEALS_TABLE_NAME": "local-deals",
+        "COMPANIES_TABLE_NAME": "local-companies",
+        "CONTACTS_TABLE_NAME": "local-contacts",
+        "DEEL_PEOPLE_TABLE_NAME": "local-deel-people",
+        "LINEAR_DELIVERY_TABLE_NAME": "local-linear-delivery",
+        "PERSON_TABLE_NAME": "local-person",
+        "DOCUMENTS_TABLE_NAME": "local-documents",
+        "DOCUMENT_VERSIONS_TABLE_NAME": "local-document-versions",
+        "DOCUMENT_ACCESS_TABLE_NAME": "local-document-access",
+        "DOCUMENT_BUCKET_NAME": "aerostack-apiaerostackstack-documenthostapidocumentbuckete6f-bjt10lf4xp17",
+        "CLOUDFRONT_DOMAIN": "d2iy22d3jj730n.cloudfront.net",
+        "CLOUDFRONT_DISTRIBUTION_ID": "E1KTLQP7EOYDZD",
+        "API_BASE_URL": "http://localhost:3001",
+        "WEBHOOK_BASE_URL": "https://a7e6-125-20-216-178.ngrok-free.app",
+        "GOOGLE_DRIVE_SA_SECRET_NAME": "aerostack/document-host/google-drive-sa",
+        "FRONTEND_URL": "http://localhost:5173",
+        "DOCUSIGN_ENVELOPES_TABLE": "local-docusign-envelopes",
+        "DROPBOX_SIGN_REQUESTS_TABLE": "local-docusign-envelopes",
+        "DROPBOX_SIGN_CLIENT_ID": "049f0d6cd28ed40490c83fa4a0f72935",
+        "DROPBOX_SIGN_API_KEY_SECRET": "aerostack/document-host/dropbox-sign-api-key",
+        "DROPBOX_SIGN_APP_SECRET": "4fb681f36b74fa01b52d5bedd0878daf",
+        "DROPBOX_SIGN_BASE_URL": "https://api.hellosign.com/v3",
+        "DROPBOX_SIGN_TEST_MODE": "true",
+        "SIGNATURE_FROM_EMAIL": "noreply@aerostack.enterprise.io",
+        "SIGN_LINK_SECRET": "local-dev-sign-link-secret-change-me",
+        "ENABLE_DROPBOX_SIGN_CERTIFICATION": "true"
+    }
+}

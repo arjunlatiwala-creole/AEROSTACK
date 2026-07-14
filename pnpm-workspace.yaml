@@ -1,0 +1,4 @@
+packages:
+  - "pwa-frontend"
+  - "common"
+  - "infra"

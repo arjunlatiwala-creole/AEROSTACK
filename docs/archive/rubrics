@@ -1,0 +1,223 @@
+Appendix 2 — Aerostack Scoring Rubric (Role-agnostic, build-ready)
+
+Shared rules for all categories
+	•	Exactly one Outcome Owner; ≤3 Merited Contributors (25–50% each).
+	•	Effort (1–5) and Outcome (1–5) are chosen from the buckets below (no half steps).
+	•	Loop Score = Effort × Outcome.
+	•	Velocity (90d) = (0–30d avg × 0.5) + (31–60d × 0.3) + (61–90d × 0.2).
+	•	Lessons (abstract ≤280 chars + tags + reuse note) required at Adaptation.
+
+Tip: choose the lowest bucket that fully fits the work. When in doubt, round down on Effort, honest on Outcome.
+
+⸻
+
+1) Delivery / Engineering Project (ENG)
+
+Effort (pick one)
+	1.	Trivial fix / one-file change
+	2.	Small feature / isolated component
+	3.	Sprint-sized change w/ dependencies
+	4.	Multi-sprint, cross-team, infra/app changes
+	5.	Program-scale / multi-service, migrations, net-new platform
+
+Outcome (pick one)
+	1.	Missed acceptance/SLO, regressions introduced
+	2.	Partial acceptance, notable defects/debt left
+	3.	Meets acceptance, stable in prod (no major issues)
+	4.	Exceeds NFRs (perf/cost/runtime) with measurable gain
+	5.	Step-change: platform leverage, major perf/cost win, unlocks new capability
+
+Secondary metrics (reference only): on-time %, post-release defects, perf/cost deltas.
+Velocity tweak: none.
+
+⸻
+
+2) Stewardship / Managed Services (MSP)
+
+Effort
+	1.	Routine checks / automation runbooks
+	2.	Low-touch multi-asset care (backups/patches)
+	3.	Complex recurring cycles across estates (patching, backups, IAM hygiene)
+	4.	High-coordination upgrades/compliance waves
+	5.	Crisis/migration/major reliability program
+
+Outcome
+	1.	SLAs missed; repeat incidents; MTTR trending worse
+	2.	SLAs barely met; no improvement trend
+	3.	SLAs met; stability maintained; MTTR acceptable
+	4.	SLAs exceeded and measurable improvements (cost, perf, risk)
+	5.	Material risk/cost reduction; reliability step-change; sustained trend up
+
+Secondary: SLA %, uptime, MTTR/MTTD, cost/perf trend.
+Velocity tweak: apply consistency floor option (Velocity ≥ 0.8 × avg_90d) to avoid one bad week nuking score.
+
+⸻
+
+3) Go-To-Market / Marketing (GTM)
+
+Effort
+	1.	Single asset update (one-pager, blog, deck tweak)
+	2.	Light campaign/enablement (email, social, 1–2 assets)
+	3.	Multi-asset, cross-channel campaign; events/webinars
+	4.	Program launch (partners/PR/events) with measurement
+	5.	Major repositioning/brand system; multi-quarter program
+
+Outcome
+	1.	No observable lift (traffic/engagement/pipeline)
+	2.	Minor lift; below target KPIs
+	3.	Hits KPI targets (MQL/engagement/pipeline influenced)
+	4.	Exceeds KPIs; sustained pipeline influence; partner credit
+	5.	Category movement / partner tier influence / sustained demand curve up
+
+Secondary: MQL→SQL rates, CAC proxy, partner co-marketing credits.
+Velocity tweak: slight recency bias (you’ll naturally get it via the 50/30/20 weighting).
+
+⸻
+
+4) Business Development / Sales (BD)
+
+Effort
+	1.	Intro/qualification, discovery notes
+	2.	Light proposal / SOW draft
+	3.	Full solutioning; multi-stakeholder alignment
+	4.	Complex deal (legal/security/finance), tough negotiations
+	5.	Multi-party ecosystem deal; partner motions; strategic packaging
+
+Outcome
+	1.	No next step; stall/loss
+	2.	Stage advance without material value change
+	3.	Closed-Won at target scope/margin/terms
+	4.	Closed-Won above target (better margin/term quality)
+	5.	Strategic win: marquee logo/size/tier unlocks new lanes
+
+Secondary: $ booked, margin/terms quality, CEI credits, partner tier movement.
+Velocity tweak: consider materiality buckets operationally (don’t change score math).
+
+⸻
+
+5) Operations / Internal Change
+
+5a) OPS:Finance
+
+Effort
+	1.	SOP tweak (reporting template, single metric)
+	2.	Team-level process change (AP/AR cadence)
+	3.	Cross-team system/process rollout (billing/revenue ops)
+	4.	Org-wide policy/system (forecasting, cost controls)
+	5.	Structural transformation (unit economics overhaul)
+
+Outcome
+	1.	No adoption; data quality declines
+	2.	Partial adoption; weak signal
+	3.	Adopted; measurable efficiency/margin gains
+	4.	Broad adoption; durable gains (error/variance drop)
+	5.	Structural step-change (compliance, margin, cash cycle)
+
+Secondary: adoption %, cycle-time, variance/error rate, forecast accuracy.
+
+5b) OPS:HR
+
+Effort
+	1.	Policy tweak (PTO template, onboarding checklist)
+	2.	Team-level ritual (weekly check-ins, showcases)
+	3.	Cross-team cadence/system (reviews, compensation calendar)
+	4.	Org policy/system (benefits, compliance, DEI reporting)
+	5.	Org transformation (career lattice, leveling, promotion process)
+
+Outcome
+	1.	No adoption; confusion/friction up
+	2.	Partial adoption; negligible gain
+	3.	Adopted; measurable clarity/retention/throughput gains
+	4.	Broad adoption; sustained improvements across teams
+	5.	Structural shift (attrition ↓, time-to-productive ↓, compliance ↑)
+
+Secondary: time-to-productive, retention %, cycle-times, incident counts.
+
+5c) OPS:SalesOps (maps to RevOps)
+
+Effort
+	1.	CRM hygiene tweak; simple dashboard
+	2.	Team pipeline process; handoff rules
+	3.	Cross-team GTM system; conversion playbooks
+	4.	Org-wide forecasting + quota/territory system
+	5.	Structural GTM architecture (ICPs, tiers, partner motions)
+
+Outcome
+	1.	No pipeline/forecast quality change
+	2.	Partial adoption; hygiene up, no conversion gain
+	3.	Adopted; conversion or forecast accuracy improves
+	4.	Broad adoption; sustained pipeline quality/lift
+	5.	Step-change in conversion velocity or forecast accuracy
+
+Secondary: stage conversion %, forecast accuracy, cycle time, pipeline coverage.
+
+Velocity tweak for OPS: reward durability—if adoption backslides within 30–60d, cap Outcome at 3.
+
+⸻
+
+6) Learning / Certification (LND)
+
+Effort
+	1.	Micro-badge (hours)
+	2.	Associate-level cert (days–weeks)
+	3.	Professional-level cert (weeks–months)
+	4.	Specialty/deep track (months)
+	5.	Multi-cert expert path (sustained)
+
+Outcome
+	1.	Attempt/no pass
+	2.	Pass, not yet applied
+	3.	Pass + applied within 30 days (in a loop)
+	4.	Pass + applied with measurable impact
+	5.	Pass + org leverage (enablement, templates, revenue impact)
+
+Secondary: exam score, time-to-apply, downstream loop references.
+Velocity tweak: small bonus (operationally) for on-time completion + applied use within 30d.
+
+⸻
+
+7) Advisory / Strategy / Executive (ADVISORY)
+
+Effort
+	1.	One-off advisory / review
+	2.	Light discovery; initial framing
+	3.	Strategy sprint; options/risks/plan
+	4.	Multi-stakeholder strategy + alignment, decision package
+	5.	Market/partner architecture; ecosystem-scale program
+
+Outcome
+	1.	No decision/traction
+	2.	Decision deck/recs; no uptake
+	3.	Decision taken; initial execution starts
+	4.	Decision + measurable business impact (rev, cost, risk)
+	5.	Strategy opens a durable new lane (tier/market/flywheel shift)
+
+Secondary: decision latency, adoption rate, downstream revenue/cost impacts.
+Velocity tweak: longer arc—score Outcome only when it converts (avoid “deck theater”).
+
+⸻
+
+Aggregation & Credit
+
+Per-person velocity is computed from their credit-weighted loop_scores:
+	•	Owner score contribution = 1.0 × loop_score (unless contributors are assigned; then owner share ≥0.5)
+	•	Contributor contribution = share × loop_score (each 0.25–0.50; up to 3 contributors)
+
+Work Résumé entries auto-create for Owner (and optionally contributors) on close:
+	•	Title, Category, Score, Date, Accreditation flag (for LND), Visibility, Public blurb.
+
+⸻
+
+Quick rubric helpers (for UI)
+	•	Show the 1–5 labels inline when selecting Effort/Outcome.
+	•	Default Effort from a template (based on category) but force explicit confirmation.
+	•	Prevent Outcome=4/5 unless evidence is attached (metric, link, or Lesson).
+	•	Require Lesson for any Outcome ≥3.
+
+⸻
+
+If you want me to drop this into your PRD file, I can also add:
+	•	a tiny JSON schema for Effort/Outcome selections (per category)
+	•	seeded help tooltips you can render in the Score modal
+
+Otherwise, you’re good to ship.

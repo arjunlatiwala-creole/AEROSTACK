@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "CI Maintenance Sweep",
+  "description": "Runs the action-version drift sweep and, if any GitHub Action majors are behind latest, bumps them in the workflow files and opens a PR.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run `bash .kiro/scripts/ci-maintenance.sh` to scan .github/workflows for GitHub Action major versions that are behind their latest release. If the script reports drift (exit 1 / \"BEHIND\" lines): update the affected `uses:` pins in .github/workflows/*.yml to the latest major, verify the workflow YAML still parses, then create a branch `ci/action-version-bumps`, commit with a conventional `ci:` message (use --no-verify), push, and open a PR with `gh pr create` summarizing the bumps. If no drift, report that all action majors are current and do nothing else. Note any actions with breaking-change release notes that need manual review rather than blindly bumping."
+  }
+}

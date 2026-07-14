@@ -1,0 +1,26 @@
+name: CI Maintenance Sweep
+
+# Agentic maintenance heartbeat. Weekly (and on-demand) it flags GitHub Action
+# major versions that have fallen behind latest — the usual cause of Node-runtime
+# deprecation warnings and eventual hard failures. Findings post to the Aerostack ops
+# Slack channel.
+#
+# Logic lives once, org-wide, in the reusable workflow at enterpriseio/.github. Dependabot
+# (.github/dependabot.yml) opens the actual bump PRs; this sweep is the visibility layer.
+
+on:
+  schedule:
+    - cron: "0 13 * * 1" # Mondays 13:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # OIDC, to read slack_bot_token from Secrets Manager
+
+jobs:
+  sweep:
+    uses: enterpriseio/.github/.github/workflows/dependabot-sweep.yml@main
+    with:
+      slack_channel: "int-ai-enterpriseinternal-aerostack-chat-dev-ops"
+      aws_role_arn: "arn:aws:iam::759945100661:role/enterprise-aerostack-gha-deploy"
+      aws_region: "us-east-1"

@@ -1,0 +1,1867 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Aerostack Dashboard API",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "Loops",
+      "description": "Loop management endpoints"
+    }
+  ],
+  "paths": {
+    "/loops": {
+      "post": {
+        "summary": "Create a new loop",
+        "description": "Creates a new loop (objective or key result) in the system",
+        "tags": [
+          "Loops"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "loop_id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "loop_type": {
+                    "type": "string",
+                    "enum": [
+                      "OBJECTIVE",
+                      "KEY_RESULT"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "ENG",
+                      "MSP",
+                      "GTM",
+                      "BD",
+                      "OPS:Finance",
+                      "OPS:HR",
+                      "OPS:SalesOps",
+                      "PRO-DEV",
+                      "ADVISORY",
+                      "OAL",
+                      "ONBOARDING",
+                      "COMMS_FLUENCY",
+                      "INT:PRODUCT",
+                      "INT:AUTO",
+                      "INT:INFRA",
+                      "INT:DOCS"
+                    ]
+                  },
+                  "owner_email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "target_completion_date": {
+                    "type": "string"
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "BACKLOG",
+                      "IN_PROGRESS",
+                      "IN_QA_REVIEW",
+                      "COMPLETED",
+                      "DELAY_INCOMPLETED"
+                    ]
+                  },
+                  "contributors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        "share": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": [
+                        "email",
+                        "share"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "status_comment": {
+                    "type": "string"
+                  },
+                  "adaptations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "why": {
+                          "type": "string"
+                        },
+                        "what": {
+                          "type": "string"
+                        },
+                        "previous_target_date": {
+                          "type": "string"
+                        },
+                        "new_target_date": {
+                          "type": "string"
+                        },
+                        "adapted_at": {
+                          "type": "string"
+                        },
+                        "follow_on_loop_id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "why",
+                        "previous_target_date",
+                        "new_target_date",
+                        "adapted_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "updated_by": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "title",
+                  "loop_type",
+                  "category",
+                  "owner_email"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "title": "Implement user authentication system",
+                "description": "Build secure authentication with OAuth 2.0 and JWT tokens",
+                "loop_type": "KEY_RESULT",
+                "category": "ENG",
+                "owner_email": "john.doe@company.com",
+                "target_completion_date": "2026-03-15",
+                "priority": 3,
+                "tags": [
+                  "security",
+                  "authentication",
+                  "backend"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Loop created successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loop_id": "loop_12345",
+                  "title": "Implement user authentication system",
+                  "category": "ENG",
+                  "status": "PLANNED",
+                  "phase": "PROJECTION",
+                  "created_at": "2026-01-12T10:30:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "get": {
+        "summary": "List loops",
+        "description": "Retrieve a list of loops with optional filtering and pagination",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ENG",
+                "MSP",
+                "GTM",
+                "BD",
+                "OPS:Finance",
+                "OPS:HR",
+                "OPS:SalesOps",
+                "OAL",
+                "LEARNING",
+                "PRO-DEV",
+                "LND",
+                "ONBOARDING",
+                "SKILLS_CERT",
+                "COMMS_FLUENCY",
+                "ADVISORY"
+              ]
+            },
+            "example": "ENG"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PLANNED",
+                "IN_PROGRESS",
+                "COMPLETED",
+                "ARCHIVED"
+              ]
+            },
+            "example": "IN_PROGRESS"
+          },
+          {
+            "name": "phase",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PROJECTION",
+                "ASSERTION",
+                "FOCUS",
+                "FEEDBACK",
+                "ADAPTATION"
+              ]
+            },
+            "example": "FOCUS"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "example": "priority"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "example": 20
+          },
+          {
+            "name": "last_key",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pagination cursor from previous response"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of loops retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "loop_id": "loop_12345",
+                      "title": "Implement user authentication system",
+                      "category": "ENG",
+                      "status": "IN_PROGRESS",
+                      "phase": "FOCUS",
+                      "priority": 3,
+                      "owner_email": "john.doe@company.com"
+                    }
+                  ],
+                  "last_key": "loop_12345",
+                  "count": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/deel-people/search": {
+      "get": {
+        "summary": "Search Deel people by email prefix",
+        "description": "Returns a list of Deel people whose email starts with the given query string",
+        "tags": [
+          "Deel"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "example": "di"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching Deel people",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "id": "p_123",
+                    "email": "dina@company.com",
+                    "full_name": "Dina Shah",
+                    "active": 1
+                  }
+                ]
+              }
+            }
+          },
+          "400": {
+            "description": "Missing query"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/loops/{loopId}": {
+      "get": {
+        "summary": "Get a loop by ID",
+        "description": "Retrieve detailed information about a specific loop",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "loopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "loop_12345"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loop retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loop_id": "loop_12345",
+                  "title": "Implement user authentication system",
+                  "description": "Build secure authentication with OAuth 2.0 and JWT tokens",
+                  "category": "ENG",
+                  "pillar": "TECHOPS",
+                  "loop_type": "KEY_RESULT",
+                  "status": "IN_PROGRESS",
+                  "phase": "FOCUS",
+                  "priority": 3,
+                  "start_date": "2026-01-01",
+                  "target_completion_date": "2026-03-15",
+                  "created_at": "2026-01-01T00:00:00Z",
+                  "updated_at": "2026-01-12T10:30:00Z",
+                  "owner_email": "john.doe@company.com",
+                  "tags": [
+                    "security",
+                    "authentication",
+                    "backend"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Loop not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update a loop",
+        "description": "Update specific fields of an existing loop",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "loopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "loop_12345"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "loop_id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": [
+                      "PROJECTION",
+                      "ASSERTION",
+                      "FOCUS",
+                      "FEEDBACK",
+                      "ADAPTATION"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "BACKLOG",
+                      "IN_PROGRESS",
+                      "IN_QA_REVIEW",
+                      "COMPLETED",
+                      "DELAY_INCOMPLETED"
+                    ]
+                  },
+                  "status_comment": {
+                    "type": "string"
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "owner_email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "loop_type": {
+                    "type": "string",
+                    "enum": [
+                      "OBJECTIVE",
+                      "KEY_RESULT"
+                    ]
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "ENG",
+                      "MSP",
+                      "GTM",
+                      "BD",
+                      "OPS:Finance",
+                      "OPS:HR",
+                      "OPS:SalesOps",
+                      "PRO-DEV",
+                      "ADVISORY",
+                      "OAL",
+                      "ONBOARDING",
+                      "COMMS_FLUENCY",
+                      "INT:PRODUCT",
+                      "INT:AUTO",
+                      "INT:INFRA",
+                      "INT:DOCS"
+                    ]
+                  },
+                  "pillar": {
+                    "type": "string",
+                    "enum": [
+                      "REVOPS",
+                      "TECHOPS",
+                      "ADMINOPS",
+                      "CROSS",
+                      "SKILLS",
+                      "INTERNAL"
+                    ]
+                  },
+                  "start_date": {
+                    "type": "string"
+                  },
+                  "target_completion_date": {
+                    "type": "string"
+                  },
+                  "actual_completion_date": {
+                    "type": "string"
+                  },
+                  "effort_score": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "outcome_score": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "updated_by": {
+                    "type": "string"
+                  },
+                  "contributors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                        },
+                        "share": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": [
+                        "email",
+                        "share"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "lesson": {
+                    "type": "object",
+                    "properties": {
+                      "abstract": {
+                        "type": "string",
+                        "maxLength": 280
+                      },
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "reuse_notes": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "abstract"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "example": {
+                "loop_id": "loop_12345",
+                "title": "Implement user authentication system - Updated",
+                "description": "Build secure authentication with OAuth 2.0, JWT tokens, and MFA",
+                "phase": "FOCUS",
+                "status": "IN_PROGRESS",
+                "priority": 2,
+                "tags": [
+                  "security",
+                  "authentication",
+                  "backend",
+                  "mfa"
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Loop updated successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loop_id": "loop_12345",
+                  "title": "Implement user authentication system - Updated",
+                  "status": "IN_PROGRESS",
+                  "phase": "FOCUS",
+                  "updated_at": "2026-01-12T11:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Loop not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/{loopId}/score": {
+      "post": {
+        "summary": "Score a loop (Effort or Outcome)",
+        "description": "Add effort or outcome scores to a loop, including optional contributors and lessons learned",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "loopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "loop_12345"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "effort_score": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "updated_by": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "effort_score"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "outcome_score": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "contributors": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                              "format": "email",
+                              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                            },
+                            "share": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "share"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "lesson": {
+                        "type": "object",
+                        "properties": {
+                          "abstract": {
+                            "type": "string",
+                            "maxLength": 280
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "reuse_notes": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "abstract"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "updated_by": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "outcome_score"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "examples": {
+                "effort": {
+                  "summary": "Score effort",
+                  "value": {
+                    "effort_score": 4
+                  }
+                },
+                "outcome": {
+                  "summary": "Score outcome with contributors and lesson",
+                  "value": {
+                    "outcome_score": 5,
+                    "contributors": [
+                      {
+                        "email": "jane.smith@company.com",
+                        "share": 0.4
+                      },
+                      {
+                        "email": "bob.wilson@company.com",
+                        "share": 0.3
+                      },
+                      {
+                        "email": "alice.jones@company.com",
+                        "share": 0.3
+                      }
+                    ],
+                    "lesson": {
+                      "abstract": "Implementing OAuth early in the project saved significant refactoring time. Starting with security-first architecture was crucial.",
+                      "tags": [
+                        "security-first",
+                        "early-planning",
+                        "architecture"
+                      ],
+                      "reuse_notes": "Consider this approach for all authentication projects. The modular design can be reused across microservices."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Loop scored successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loop_id": "loop_12345",
+                  "effort_score": 4,
+                  "outcome_score": 5,
+                  "loop_score": 4.5,
+                  "updated_at": "2026-01-12T12:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Loop not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/{loopId}/adapt": {
+      "post": {
+        "summary": "Adapt a loop",
+        "description": "Adapt a loop by changing its target date and optionally creating a follow-on loop",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "loopId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "loop_12345"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "why": {
+                    "type": "string"
+                  },
+                  "what": {
+                    "type": "string"
+                  },
+                  "new_target_completion_date": {
+                    "type": "string"
+                  },
+                  "create_follow_on": {
+                    "type": "boolean"
+                  },
+                  "follow_on_title": {
+                    "type": "string"
+                  },
+                  "follow_on_priority": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "adaptations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "why": {
+                          "type": "string"
+                        },
+                        "what": {
+                          "type": "string"
+                        },
+                        "previous_target_date": {
+                          "type": "string"
+                        },
+                        "new_target_date": {
+                          "type": "string"
+                        },
+                        "adapted_at": {
+                          "type": "string"
+                        },
+                        "follow_on_loop_id": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "why",
+                        "previous_target_date",
+                        "new_target_date",
+                        "adapted_at"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "updated_by": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "why",
+                  "new_target_completion_date"
+                ],
+                "additionalProperties": false
+              },
+              "example": {
+                "why": "Additional security requirements discovered during security audit. Need to implement additional OAuth providers and MFA.",
+                "what": "Scope expanded to include Google and Microsoft OAuth providers plus SMS-based MFA",
+                "new_target_completion_date": "2026-04-30",
+                "create_follow_on": true,
+                "follow_on_title": "Implement biometric authentication",
+                "follow_on_priority": 4
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Loop adapted successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "loop_id": "loop_12345",
+                  "target_completion_date": "2026-04-30",
+                  "adaptations": [
+                    {
+                      "why": "Additional security requirements discovered during security audit",
+                      "what": "Scope expanded to include Google and Microsoft OAuth providers plus SMS-based MFA",
+                      "previous_target_date": "2026-03-15",
+                      "new_target_date": "2026-04-30",
+                      "adapted_at": "2026-01-12T13:00:00Z",
+                      "follow_on_loop_id": "loop_67890"
+                    }
+                  ],
+                  "follow_on_loop_id": "loop_67890"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "404": {
+            "description": "Loop not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/delivery": {
+      "get": {
+        "summary": "Get delivery loops with Deel person data",
+        "description": "Retrieve loops with category 'DELIVERY' along with their corresponding Deel person information. Supports pagination.",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "description": "Number of items per page",
+            "example": 20
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pagination cursor from previous response (nextCursor)",
+            "example": "eyJsb29wX2lkIjoiNGIzNzA4MzEtN2E4Ni00OTYyLTg2NTMtYWEyZmQ1ODJkZTBlIn0="
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Learning loops with Deel person data retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "loop_data": {
+                        "loop_id": "4b370831-7a86-4962-8653-aa2fd582de0e",
+                        "title": "Complete AI/ML Training Course",
+                        "category": "MSP",
+                        "status": "PLANNED",
+                        "phase": "PROJECTION",
+                        "priority": 3,
+                        "owner_email": "john.doe@company.com",
+                        "description": "Complete advanced machine learning certification",
+                        "target_completion_date": "2026-03-15",
+                        "loop_type": "KEY_RESULT",
+                        "pillar": "CROSS",
+                        "tags": [
+                          "learning",
+                          "ai",
+                          "professional-development"
+                        ],
+                        "created_at": "2026-01-29T09:40:14.536Z",
+                        "updated_at": "2026-01-29T09:40:14.536Z"
+                      },
+                      "deel_person": {
+                        "id": "deel_user_123",
+                        "email": "john.doe@company.com",
+                        "alternate_email": "j.doe@personal.com",
+                        "given_name": "John",
+                        "family_name": "Doe",
+                        "job_title": "Senior Software Engineer",
+                        "active": 1,
+                        "department": {
+                          "id": "dept_456",
+                          "name": "Engineering"
+                        },
+                        "start_date": "2024-01-15",
+                        "seniority": "Senior",
+                        "hiring_status": "active"
+                      }
+                    }
+                  ],
+                  "pageSize": 20,
+                  "total": 45,
+                  "totalPages": 3,
+                  "hasMore": true,
+                  "nextCursor": "eyJsb29wX2lkIjoiNGIzNzA4MzEtN2E4Ni00OTYyLTg2NTMtYWEyZmQ1ODJkZTBlIn0=",
+                  "count": 20
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/opportunity": {
+      "get": {
+        "summary": "Get opportunity prioritization loops",
+        "description": "Retrieve prioritized loops from categories BD, GTM, ADVISORY with status PLANNED or IN_PROGRESS. Sorted by priority, weighted score, and target completion date. Supports pagination.",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "description": "Number of items per page",
+            "example": 20
+          },
+          {
+            "name": "nextCursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pagination cursor from previous response (nextCursor)",
+            "example": "eyJ0aW1lc3RhbXAiOiIyMDI2LTAyLTAxVDA5OjAwOjAwLjAwMFoiLCJsYXN0SWQiOiI0YjM3MDgzMS03YTg2LTQ5NjItODY1My1hYTJmZDU4MmRlMGUifQ=="
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opportunity prioritization loops retrieved successfully",
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "loop_id": "b12f0831-7a86-4962-8653-aa2fd582de99",
+                      "title": "Strategic GTM Expansion",
+                      "category": "GTM",
+                      "priority": 1,
+                      "target_completion_date": "2026-03-31",
+                      "loop_score": 4,
+                      "weighted_score": 20,
+                      "owner_name": null
+                    },
+                    {
+                      "loop_id": "c22e0831-7a86-4962-8653-aa2fd582de88",
+                      "title": "Advisory Board Setup",
+                      "category": "ADVISORY",
+                      "priority": 2,
+                      "target_completion_date": "2026-04-15",
+                      "loop_score": 3,
+                      "weighted_score": 12,
+                      "owner_name": null
+                    }
+                  ],
+                  "pageSize": 20,
+                  "hasMore": true,
+                  "nextCursor": "eyJ0aW1lc3RhbXAiOiIyMDI2LTAyLTAxVDA5OjAwOjAwLjAwMFoiLCJsYXN0SWQiOiI0YjM3MDgzMS03YTg2LTQ5NjItODY1My1hYTJmZDU4MmRlMGUifQ==",
+                  "count": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/{loop_id}": {
+      "delete": {
+        "summary": "Delete a loop",
+        "tags": [
+          "Loops"
+        ],
+        "parameters": [
+          {
+            "name": "loop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Loop deleted successfully"
+          },
+          "404": {
+            "description": "Loop not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/bulk-assign": {
+      "post": {
+        "summary": "Bulk assign a learning requirement",
+        "description": "Creates a learning loop for every person in the organization or a specific list of people",
+        "tags": [
+          "Loops"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "assign_to"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "OAL",
+                      "LEARNING",
+                      "PRO-DEV",
+                      "LND",
+                      "ONBOARDING",
+                      "SKILLS_CERT",
+                      "COMMS_FLUENCY"
+                    ],
+                    "default": "OAL"
+                  },
+                  "loop_type": {
+                    "type": "string",
+                    "enum": [
+                      "OBJECTIVE",
+                      "KEY_RESULT"
+                    ],
+                    "default": "KEY_RESULT"
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 3
+                  },
+                  "target_completion_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "assign_to": {
+                    "type": "string",
+                    "enum": [
+                      "everyone",
+                      "specific",
+                      "group"
+                    ]
+                  },
+                  "recipient_emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "description": "Required when assign_to is 'specific'"
+                  },
+                  "group_emails": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "description": "Required when assign_to is 'group'. List of Google Workspace group emails whose members will be resolved server-side."
+                  }
+                }
+              },
+              "example": {
+                "title": "Complete AWS Security Fundamentals",
+                "description": "All team members must complete the AWS Security Fundamentals course by end of quarter",
+                "category": "OAL",
+                "priority": 2,
+                "target_completion_date": "2026-06-30",
+                "tags": [
+                  "security",
+                  "aws",
+                  "mandatory"
+                ],
+                "assign_to": "everyone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Bulk assignment completed",
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_count": 15,
+                  "failed_count": 0,
+                  "loop_ids": [
+                    "uuid-1",
+                    "uuid-2"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or no recipients found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/loops/google-groups": {
+      "get": {
+        "summary": "List Google Workspace groups (OUs)",
+        "description": "Returns the customer's Google Workspace groups so admins can pick one for bulk assignment. Returns an empty list when Google Directory is not configured.",
+        "tags": [
+          "Loops"
+        ],
+        "responses": {
+          "200": {
+            "description": "List of groups",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "email": "techops@enterprise.io",
+                    "name": "TechOps"
+                  },
+                  {
+                    "email": "revops@enterprise.io",
+                    "name": "RevOps"
+                  }
+                ]
+              }
+            }
+          },
+          "502": {
+            "description": "Google Directory API error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "CognitoIdToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "AWS Cognito ID Token. Obtain this by authenticating with AWS Cognito User Pool."
+      }
+    },
+    "schemas": {
+      "CreateLoopRequest": {
+        "type": "object",
+        "properties": {
+          "loop_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "loop_type": {
+            "type": "string",
+            "enum": [
+              "OBJECTIVE",
+              "KEY_RESULT"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "ENG",
+              "MSP",
+              "GTM",
+              "BD",
+              "OPS:Finance",
+              "OPS:HR",
+              "OPS:SalesOps",
+              "PRO-DEV",
+              "ADVISORY",
+              "OAL",
+              "ONBOARDING",
+              "COMMS_FLUENCY",
+              "INT:PRODUCT",
+              "INT:AUTO",
+              "INT:INFRA",
+              "INT:DOCS"
+            ]
+          },
+          "owner_email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "target_completion_date": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "BACKLOG",
+              "IN_PROGRESS",
+              "IN_QA_REVIEW",
+              "COMPLETED",
+              "DELAY_INCOMPLETED"
+            ]
+          },
+          "contributors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "share": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "email",
+                "share"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status_comment": {
+            "type": "string"
+          },
+          "adaptations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "why": {
+                  "type": "string"
+                },
+                "what": {
+                  "type": "string"
+                },
+                "previous_target_date": {
+                  "type": "string"
+                },
+                "new_target_date": {
+                  "type": "string"
+                },
+                "adapted_at": {
+                  "type": "string"
+                },
+                "follow_on_loop_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "why",
+                "previous_target_date",
+                "new_target_date",
+                "adapted_at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "updated_by": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "loop_type",
+          "category",
+          "owner_email"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateLoopRequest": {
+        "type": "object",
+        "properties": {
+          "loop_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string",
+            "enum": [
+              "PROJECTION",
+              "ASSERTION",
+              "FOCUS",
+              "FEEDBACK",
+              "ADAPTATION"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "BACKLOG",
+              "IN_PROGRESS",
+              "IN_QA_REVIEW",
+              "COMPLETED",
+              "DELAY_INCOMPLETED"
+            ]
+          },
+          "status_comment": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "owner_email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "loop_type": {
+            "type": "string",
+            "enum": [
+              "OBJECTIVE",
+              "KEY_RESULT"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "ENG",
+              "MSP",
+              "GTM",
+              "BD",
+              "OPS:Finance",
+              "OPS:HR",
+              "OPS:SalesOps",
+              "PRO-DEV",
+              "ADVISORY",
+              "OAL",
+              "ONBOARDING",
+              "COMMS_FLUENCY",
+              "INT:PRODUCT",
+              "INT:AUTO",
+              "INT:INFRA",
+              "INT:DOCS"
+            ]
+          },
+          "pillar": {
+            "type": "string",
+            "enum": [
+              "REVOPS",
+              "TECHOPS",
+              "ADMINOPS",
+              "CROSS",
+              "SKILLS",
+              "INTERNAL"
+            ]
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "target_completion_date": {
+            "type": "string"
+          },
+          "actual_completion_date": {
+            "type": "string"
+          },
+          "effort_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "outcome_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "updated_by": {
+            "type": "string"
+          },
+          "contributors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "share": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "email",
+                "share"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "lesson": {
+            "type": "object",
+            "properties": {
+              "abstract": {
+                "type": "string",
+                "maxLength": 280
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "reuse_notes": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "abstract"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "ScoreRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "effort_score": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "updated_by": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "effort_score"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome_score": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "contributors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "share": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "required": [
+                    "email",
+                    "share"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "lesson": {
+                "type": "object",
+                "properties": {
+                  "abstract": {
+                    "type": "string",
+                    "maxLength": 280
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "reuse_notes": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "abstract"
+                ],
+                "additionalProperties": false
+              },
+              "updated_by": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "outcome_score"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ScoreEffortRequest": {
+        "type": "object",
+        "properties": {
+          "effort_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "updated_by": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "effort_score"
+        ],
+        "additionalProperties": false
+      },
+      "ScoreOutcomeRequest": {
+        "type": "object",
+        "properties": {
+          "outcome_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "contributors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "share": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "email",
+                "share"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "lesson": {
+            "type": "object",
+            "properties": {
+              "abstract": {
+                "type": "string",
+                "maxLength": 280
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "reuse_notes": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "abstract"
+            ],
+            "additionalProperties": false
+          },
+          "updated_by": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome_score"
+        ],
+        "additionalProperties": false
+      },
+      "AdaptLoopRequest": {
+        "type": "object",
+        "properties": {
+          "why": {
+            "type": "string"
+          },
+          "what": {
+            "type": "string"
+          },
+          "new_target_completion_date": {
+            "type": "string"
+          },
+          "create_follow_on": {
+            "type": "boolean"
+          },
+          "follow_on_title": {
+            "type": "string"
+          },
+          "follow_on_priority": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "adaptations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "why": {
+                  "type": "string"
+                },
+                "what": {
+                  "type": "string"
+                },
+                "previous_target_date": {
+                  "type": "string"
+                },
+                "new_target_date": {
+                  "type": "string"
+                },
+                "adapted_at": {
+                  "type": "string"
+                },
+                "follow_on_loop_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "why",
+                "previous_target_date",
+                "new_target_date",
+                "adapted_at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "updated_by": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "why",
+          "new_target_completion_date"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "security": [
+    {
+      "CognitoIdToken": []
+    }
+  ]
+}

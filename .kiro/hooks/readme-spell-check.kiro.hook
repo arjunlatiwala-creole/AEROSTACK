@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "README Spell Check",
+  "description": "Checks documentation files for spelling, grammar, and clarity issues.",
+  "version": "1",
+  "when": {
+    "type": "manual",
+    "button_text": "Check Documentation"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Review all markdown documentation files (README.md, docs/**/*.md) for: spelling errors, grammar issues, broken links, inconsistent terminology, and unclear instructions. Fix issues while maintaining enterprise voice and terminology standards. Check that setup instructions are accurate and complete."
+  }
+}

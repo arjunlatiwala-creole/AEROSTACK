@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "API Schema Validation",
+  "description": "Validates OpenAPI spec, checks Zod schemas match API contracts, and verifies Swagger UI configuration.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/lib/validators/**/*.ts", "src/app/api/**/*.ts", "openapi.yaml", "openapi.json", "schema.graphql"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "API-related files changed. Validate against enterprise API standards:\n1. If openapi.yaml exists, validate with npx @apidevtools/swagger-cli validate openapi.yaml\n2. Check that every Route Handler in src/app/api/ has a corresponding path in the OpenAPI spec — no undocumented endpoints\n3. Verify Zod schemas in src/lib/validators/ align with OpenAPI request/response schemas\n4. Check error responses are documented (400, 401, 403, 404, 500)\n5. Verify Swagger UI route exists at app/api/docs/ and is disabled in production\n6. If contract tests exist in tests/api/, run them\nReport mismatches between spec and implementation."
+  }
+}

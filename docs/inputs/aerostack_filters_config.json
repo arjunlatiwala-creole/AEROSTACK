@@ -1,0 +1,130 @@
+{
+  "project": "Aerostack transcript lens extraction",
+  "panels": [
+    {
+      "name": "Loop Outcomes",
+      "function": "Completed or adapted loops by value cluster"
+    },
+    {
+      "name": "Scoreboard Summary",
+      "function": "Internal Aerostack metrics across personas"
+    },
+    {
+      "name": "Emergence Feed",
+      "function": "Patterns, learnings, and new leverage points"
+    },
+    {
+      "name": "Focus Density",
+      "function": "Heatmap of attention by domain or loop"
+    }
+  ],
+  "core_concepts": [
+    {
+      "aerostack_term": "Projection",
+      "ui_label": "Proposed Initiative",
+      "example": "Build async bot MVP"
+    },
+    {
+      "aerostack_term": "Assertion",
+      "ui_label": "Commitment",
+      "example": "Launch by Sept 1, no scope creep"
+    },
+    {
+      "aerostack_term": "Focus",
+      "ui_label": "Active Tasks",
+      "example": "Write Lambda, test Fargate"
+    },
+    {
+      "aerostack_term": "Feedback",
+      "ui_label": "Signal",
+      "example": "showcase results, stakeholder input"
+    },
+    {
+      "aerostack_term": "Adaptation",
+      "ui_label": "Loop Changes",
+      "example": "Refactored timeline or goal"
+    },
+    {
+      "aerostack_term": "Friction",
+      "ui_label": "Blocker",
+      "example": "No reviewer assigned"
+    },
+    {
+      "aerostack_term": "Emergence",
+      "ui_label": "New Opportunity",
+      "example": "Partner suggested spin-off use"
+    }
+  ],
+  "lenses": [
+    {
+      "lens": "Opportunity",
+      "primary_use": "Detect new cycle trigger",
+      "aerostack_trigger": "New Projection",
+      "system_action": "Start loop",
+      "tag": "#loop-opportunity"
+    },
+    {
+      "lens": "Dissonance",
+      "primary_use": "Flag alignment drift",
+      "aerostack_trigger": "Assertion drift",
+      "system_action": "Recommit or adapt",
+      "tag": "#loop-dissonance"
+    },
+    {
+      "lens": "Emergence",
+      "primary_use": "Surface novel, non-planned signal",
+      "aerostack_trigger": "Unplanned insight",
+      "system_action": "Initiate or fork cycle",
+      "tag": "#loop-emergence"
+    },
+    {
+      "lens": "Convergence",
+      "primary_use": "Confirm repeat signal",
+      "aerostack_trigger": "Repetition detected",
+      "system_action": "Codify process",
+      "tag": "#loop-convergence"
+    },
+    {
+      "lens": "Inertia",
+      "primary_use": "Detect false motion or noise",
+      "aerostack_trigger": "No movement",
+      "system_action": "Close loop",
+      "tag": "#loop-inertia"
+    },
+    {
+      "lens": "Compression",
+      "primary_use": "Extract synthesis or principle",
+      "aerostack_trigger": "Learnings repeat",
+      "system_action": "Store synthesis",
+      "tag": "#loop-compression"
+    },
+    {
+      "lens": "Re-grounding",
+      "primary_use": "Return to values & clarity",
+      "aerostack_trigger": "Cultural drift",
+      "system_action": "Anchor to TECSPEC",
+      "tag": "#loop-reground"
+    }
+  ],
+  "extractor_output_schema": [
+    "timestamp",
+    "speaker",
+    "text",
+    "lens",
+    "aerostack_term",
+    "reason",
+    "loop_action",
+    "tag",
+    "assertion_strength",
+    "focus_density",
+    "friction",
+    "dates",
+    "ownership",
+    "scope_change"
+  ],
+  "supported_inputs": [
+    ".txt",
+    ".vtt",
+    ".srt"
+  ]
+}

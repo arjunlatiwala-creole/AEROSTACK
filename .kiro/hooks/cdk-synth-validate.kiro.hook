@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "CDK Synth Validation",
+  "description": "Validates CDK infrastructure code by running synth when infrastructure files change.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["infra/**/*.ts", "infra/lib/**/*.ts", "infra/bin/**/*.ts", "cdk.json"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "CDK infrastructure code has changed. Run cdk synth --quiet to validate the infrastructure code compiles correctly. Report any synthesis errors. If cdk-nag is configured, report any compliance findings."
+  }
+}

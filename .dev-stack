@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Starting infrastructure services (MongoDB & Redis)..."
+docker-compose up -d
+
+echo "Waiting for services to be ready..."
+sleep 10
+
+echo "Starting application stack..."
+pnpm start:stack

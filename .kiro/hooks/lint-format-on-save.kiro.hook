@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Lint and Format on Save",
+  "description": "Runs ESLint + Prettier on TypeScript/JavaScript and ruff on Python files automatically on save.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.py", "lib/**/*.py"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file has been saved. Apply formatting and linting fixes. For TypeScript/JavaScript: run npx eslint --fix and npx prettier --write on the changed file. For Python: run ruff check --fix and ruff format on the changed file. Report any issues that could not be auto-fixed."
+  }
+}

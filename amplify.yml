@@ -1,0 +1,20 @@
+version: 1
+# Set VITE_TOOLS_API_URL on each Amplify branch (Console → Environment variables) to match deployed ToolsApiUrl (Aerostack-Tools-{stage} stack output).
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm install -g pnpm@9
+        - NODE_ENV=development pnpm install --frozen-lockfile --filter @enterprise/pwa-frontend --filter @enterprise/common
+    build:
+      commands:
+        - export NODE_OPTIONS="--max-old-space-size=4096"
+        - pnpm --filter @enterprise/common build
+        - pnpm --filter @enterprise/pwa-frontend build
+  artifacts:
+    baseDirectory: pwa-frontend/dist
+    files:
+      - '**/*'
+  cache:
+    paths: []
+
