@@ -35,5 +35,3 @@ This environment is pre-configured with intentional "faults" that allow you to p
 **DO NOT DEPLOY THIS REPOSITORY TO A PRODUCTION ENVIRONMENT UNMODIFIED.** 
 It contains intentional security vulnerabilities, exposed ports, and non-compliant configurations specifically designed to be caught and remediated by AI agents during presentations.
 
----
-*Created for the Agentic DevOps Live Showcase.*
