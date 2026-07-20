@@ -10,7 +10,7 @@ jobs:
   security-scans:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@master
@@ -31,7 +31,7 @@ jobs:
     needs: security-scans
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Build and Push Docker image
         run: |
